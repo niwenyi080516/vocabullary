@@ -208,10 +208,27 @@ input[type=range]{width:130px;accent-color:var(--accent)}
 input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 .danger{color:var(--bad);border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;font-size:13px}
 .toast{
-  position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:99;
+  position:fixed;left:50%;bottom:calc(34px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;
   background:rgba(24,27,35,.94);color:#fff;padding:11px 18px;border-radius:99px;font-size:13.5px;
   box-shadow:0 10px 26px rgba(0,0,0,.28);animation:fadeUp .2s ease both;max-width:82vw;text-align:center;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;
 }
+.toast .undo{
+  margin-left:8px;padding:4px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.45);
+  font-weight:700;font-size:12.5px;color:#fff;background:rgba(255,255,255,.16);white-space:nowrap;
+}
+.toast .undo:active{transform:scale(.96)}
+
+/* 词表管理 */
+.wrows{max-height:50vh;overflow:auto;margin-top:12px;border-top:1px solid var(--line)}
+.wrow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.wrow b{font-size:14px;font-weight:650;flex:none;min-width:80px;max-width:45%;word-break:break-word}
+.wrow span{flex:1;font-size:12.5px;color:var(--sub);line-height:1.5}
+.wrow .x{
+  flex:none;width:28px;height:28px;border-radius:9px;border:1px solid var(--line);
+  color:var(--bad);font-size:15px;line-height:1;display:grid;place-items:center;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 </style>
 </head>
 <body>
@@ -6302,10 +6319,14 @@ function load(){
     DECKS.custom = s.custom;
     const ks = Object.keys(s.log);
     if(ks.length > 120){ ks.sort(); ks.slice(0, ks.length - 120).forEach(kk => { delete s.log[kk]; }); }
+    // 旧数据没有 per-deck 计数：把今天的量归到当前词书，避免白送一次新词额度
+    const tk = dkey(), tlog = s.log[tk];
+    if(tlog && !tlog.decks){ tlog.decks = {}; tlog.decks[s.deck] = { new:tlog.new || 0, review:tlog.review || 0 }; }
     return s;
   }catch(e){ return def; }
 }
 let S = load();
+DECKS.custom = S.custom;   // load() 无存档时会直接返回默认对象,跳过上面的赋值,这里必须补同步
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
 
 const words = () => DECKS[S.deck] || [];
@@ -6313,8 +6334,14 @@ const kkey = w => S.deck + '::' + w;
 const rec = w => S.progress[kkey(w)];
 function todayLog(){
   const d = dkey();
-  if(!S.log[d]) S.log[d] = { ids:{}, new:0, review:0 };
+  if(!S.log[d]) S.log[d] = { ids:{}, new:0, review:0, decks:{} };
+  if(!S.log[d].decks) S.log[d].decks = {};
   return S.log[d];
+}
+function deckToday(id){
+  const l = todayLog();
+  if(!l.decks[id]) l.decks[id] = { new:0, review:0 };
+  return l.decks[id];
 }
 function touchStreak(){
   const t = dkey();
@@ -6346,7 +6373,9 @@ function speak(text, rate){
 
 /* ================= 提示 ================= */
 let toastTimer = 0;
+let UNDO = null, undoTimer = 0;
 function toast(msg){
+  UNDO = null;
   const t = $('#toast');
   t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer);
@@ -6376,6 +6405,7 @@ function renderHome(){
   const list = words();
   const now = Date.now();
   const tl = todayLog();
+  const dt = deckToday(S.deck);
   let learned = 0, mastered = 0, due = 0, fresh = 0;
   for(let i = 0; i < list.length; i++){
     const r = S.progress[kkey(list[i].w)];
@@ -6384,10 +6414,10 @@ function renderHome(){
     if(r.s >= MASTER) mastered++;
     if(r.due <= now && !tl.ids[kkey(list[i].w)]) due++;
   }
-  const allowNew = Math.max(0, S.settings.dailyNew - tl.new);
+  const allowNew = Math.max(0, S.settings.dailyNew - dt.new);
   const newTake = Math.min(allowNew, fresh);
   const remain = due + newTake;
-  const doneToday = tl.new + tl.review;
+  const doneToday = dt.new + dt.review;
   const total = doneToday + remain;
   const pct = total ? doneToday / total : 0;
   const C = 2 * Math.PI * 30;
@@ -6493,7 +6523,7 @@ function startSession(mode){
       return r && r.s > 0 && r.due <= now && !tl.ids[kkey(w.w)];
     });
     const freshAll = list.filter(w => { const r = rec(w.w); return !r || r.s === 0; });
-    const allow = Math.max(0, S.settings.dailyNew - tl.new);
+    const allow = Math.max(0, S.settings.dailyNew - deckToday(S.deck).new);
     const pick = shuffle(freshAll.slice()).slice(0, allow);
     queue = shuffle(due.slice()).map(w => ({ w:w, isNew:false })).concat(pick.map(w => ({ w:w, isNew:true })));
     shuffle(queue);
@@ -6503,7 +6533,7 @@ function startSession(mode){
     toast(mode === 'random' ? '暂时没有可复习的词' : '今天没有要背的词了');
     return;
   }
-  sess = { queue:queue, i:0, repeats:{}, right:0 };
+  sess = { queue:queue, i:0, repeats:{}, right:0, mode:(mode === 'random' ? 'random' : 'scheduled') };
   CUR = 'study';
   window.scrollTo(0, 0);
   renderCard();
@@ -6577,24 +6607,57 @@ function applyGrade(word, g){
   touchStreak();
 }
 
+/* 评分可撤销：只对「认识」保留一次快照，3.5 秒内可回退排期与今日计数 */
+function offerUndo(o){
+  UNDO = o;
+  clearTimeout(undoTimer);
+  const t = $('#toast');
+  t.innerHTML = '认识 · ' + IV[S.progress[o.key].s] + ' 天后再复习' +
+    '<button class="undo" data-act="undo">撤销</button>';
+  t.hidden = false;
+  undoTimer = setTimeout(function(){ t.hidden = true; UNDO = null; }, 3500);
+}
+function undoGrade(){
+  if(!UNDO) return;
+  const o = UNDO;
+  UNDO = null;
+  clearTimeout(undoTimer);
+  if(o.snap) S.progress[o.key] = o.snap; else delete S.progress[o.key];
+  if(o.logAdded){
+    const l = todayLog();
+    if(l.ids[o.key]){
+      delete l.ids[o.key];
+      const dl = deckToday(o.deck);
+      if(o.wasNew){ l.new = Math.max(0, l.new - 1); dl.new = Math.max(0, dl.new - 1); }
+      else { l.review = Math.max(0, l.review - 1); dl.review = Math.max(0, dl.review - 1); }
+    }
+  }
+  if(o.sess && o.sess.i > 0) o.sess.i--;
+  save();
+  $('#toast').hidden = true;
+  if(o.sess && o.sess === sess){ CUR = 'study'; renderCard(); } else render();
+  toast('已撤销');
+}
+
 function grade(g){
   if(!sess || sess.i >= sess.queue.length) return;
   const item = sess.queue[sess.i];
   const key = kkey(item.w.w);
-  const prev = S.progress[key];
-  const wasNew = !prev || prev.s === 0;
+  const casual = sess.mode === 'random';   // 随机复习：只看，不改排期
+  let snap = null, wasNew = false, logAdded = false;
 
-  applyGrade(item.w.w, g);
-
-  const after = S.progress[key];
-  if(g === 2) toast('认识 · ' + IV[after.s] + ' 天后再复习');
-  else if(g === 1) toast('有点模糊 · 10 小时后再来一次');
-  else toast('不认识 · 这一轮还会再碰到');
-
-  const tl = todayLog();
-  if(!tl.ids[key]){
-    tl.ids[key] = 1;
-    if(wasNew) tl.new++; else tl.review++;
+  if(!casual){
+    const before = S.progress[key];
+    snap = before ? Object.assign({}, before) : null;
+    wasNew = !before || before.s === 0;
+    applyGrade(item.w.w, g);
+    const l = todayLog();
+    if(!l.ids[key]){
+      l.ids[key] = 1;
+      const dl = deckToday(S.deck);
+      if(wasNew){ l.new++; dl.new++; } else { l.review++; dl.review++; }
+      logAdded = true;
+    }
   }
 
   const times = sess.repeats[key] || 0;
@@ -6604,16 +6667,22 @@ function grade(g){
   sess.i++;
   save();
   renderCard();
+
+  if(casual) toast(g === 2 ? '记住了' : (g === 1 ? '再看一遍吧' : '这一轮还会再见到它'));
+  else if(g === 2) offerUndo({ key:key, snap:snap, wasNew:wasNew, logAdded:logAdded, deck:S.deck, sess:sess });
+  else if(g === 1) toast('有点模糊 · 10 小时后再来一次');
+  else toast('不认识 · 这一轮还会再碰到');
 }
 
 function renderDone(){
-  const tl = todayLog();
+  CUR = 'done';
+  const dt = deckToday(S.deck);
   let mastered = 0;
   words().forEach(w => { const r = rec(w.w); if(r && r.s >= MASTER) mastered++; });
   $('#main').innerHTML = `<div class="wrap pad"><div class="done">
     <div class="emoji">🎉</div>
     <h2>这一轮背完了</h2>
-    <p class="sub">今天累计学了 ${tl.new + tl.review} 个词 · 已掌握 ${mastered} 个</p>
+    <p class="sub">今天累计学了 ${dt.new + dt.review} 个词 · 已掌握 ${mastered} 个</p>
     <div class="sheet-actions" style="margin-top:26px">
       <button class="btn ghost" data-act="again">再来一轮</button>
       <button class="btn primary" data-act="home">回到首页</button>
@@ -6658,11 +6727,23 @@ function renderQuiz(){
   const list = words();
   const keyOf = x => item.dir === 'w2m' ? x.m : x.w;
   const correct = keyOf(item.w);
-  const others = shuffle(list.filter(x => x.w !== item.w.w && keyOf(x) !== correct)).slice(0, 3);
-  const opts = shuffle([item.w].concat(others));
-  quiz.opts = opts;
-  quiz.correct = correct;
   const answered = quiz.picked != null;
+  // 答题后必须复用同一组选项：重新洗牌会让 picked 下标指向别的选项，标红就落错位置
+  let opts = quiz.opts;
+  if(!answered || !opts || !opts.length){
+    const used = {};
+    used[String(correct).toLowerCase()] = 1;
+    const others = [];
+    const pool = shuffle(list.filter(x => x.w !== item.w.w));
+    for(let i = 0; i < pool.length && others.length < 3; i++){
+      const k = String(keyOf(pool[i])).toLowerCase();
+      if(used[k]) continue;            // 同时去掉与正确答案重复、以及彼此重复的干扰项
+      used[k] = 1;
+      others.push(pool[i]);
+    }
+    opts = quiz.opts = shuffle([item.w].concat(others));
+  }
+  quiz.correct = correct;
 
   const prompt = item.dir === 'w2m'
     ? `<div class="q-word">${esc(item.w.w)}</div>${(item.w.pos || item.w.ph) ? `<div class="fp">${item.w.pos ? `<span class="ptag">${esc(item.w.pos)}</span>` : ''}${item.w.ph ? esc(item.w.ph) : ''}</div>` : ''}<div class="q-ask">选出正确的释义</div>`
@@ -6723,7 +6804,7 @@ function renderStats(){
       <div class="stat"><span>当前词书已学</span><b>${learned}</b></div>
       <div class="stat"><span>已掌握</span><b>${mastered}</b></div>
       <div class="stat"><span>连续打卡</span><b>${S.streak.count}<small style="font-size:13px;color:var(--sub)"> 天</small></b></div>
-      <div class="stat"><span>累计学习</span><b>${Object.keys(S.progress).length}</b></div>
+      <div class="stat"><span>全部词书累计</span><b>${Object.keys(S.progress).length}</b></div>
     </div>
     <div class="card section">
       <h3>最近 7 天</h3>
@@ -6751,6 +6832,7 @@ function modalImport(){
     <p class="sub">每行一个词。支持两种写法:<br>
       ① 竖线分隔:<code>abandon|/əˈbændən/|to leave somebody for ever|They had to abandon the plan.</code> 音标和例句可以省。<br>
       ② 空格或逗号分隔:<code>abandon to leave somebody for ever</code></p>
+    <p class="sub" style="margin-top:8px">当前「我的词表」有 ${S.custom.length} 个词 · <button class="link" style="padding:0;text-decoration:underline" data-act="customList">管理</button></p>
     <textarea id="importText" placeholder="abandon|/əˈbændən/|to leave somebody or something and never come back|They had to abandon the plan.
 abandon to leave somebody and never come back"></textarea>
     <div class="sheet-actions">
@@ -6836,6 +6918,10 @@ function modalSettings(){
         <b id="ttsRateVal" style="width:28px;text-align:right">${S.settings.ttsRate}</b>
       </div>
     </div>
+    <div class="field">
+      <div><label>我的词表</label><div class="sub">已导入 ${S.custom.length} 个词,可逐个删除或全部清空</div></div>
+      <button class="danger" data-act="customList">管理</button>
+    </div>
     <div class="field" style="border-bottom:0">
       <div><label>清空当前词书进度</label><div class="sub">只影响「${esc(META[S.deck].name)}」</div></div>
       <button class="danger" data-act="resetDeck">清空</button>
@@ -6844,6 +6930,55 @@ function modalSettings(){
       <button class="btn ghost" data-act="close">关闭</button>
       <button class="btn primary" data-act="saveSettings">保存</button>
     </div>`);
+}
+
+/* ================= 我的词表 ================= */
+function modalCustom(){
+  const rows = S.custom.map((w, i) => `<div class="wrow">
+      <b>${esc(w.w)}</b>
+      <span>${esc(w.m || '')}</span>
+      <button class="x" data-act="delWord" data-i="${i}" aria-label="删除 ${esc(w.w)}">×</button>
+    </div>`).join('');
+  openModal(`<h3>我的词表 · ${S.custom.length} 个词</h3>
+    <p class="sub">删掉一个词,它在你词表里的学习进度也会一起移除。</p>
+    ${S.custom.length ? `<div class="wrows">${rows}</div>` : '<p class="sub" style="margin-top:14px">还没有导入过词,先去「导入词表」加几个。</p>'}
+    <div class="sheet-actions">
+      ${S.custom.length ? '<button class="danger" style="flex:1" data-act="clearCustom">全部清空</button>' : ''}
+      <button class="btn ghost" data-act="close">关闭</button>
+    </div>`);
+}
+function delCustom(i){
+  const w = S.custom[i];
+  if(!w) return;
+  S.custom.splice(i, 1);
+  delete S.progress['custom::' + w.w];
+  const tl = todayLog();
+  delete tl.ids['custom::' + w.w];
+  save();
+  renderDeckSelect();
+  modalCustom();
+  toast('已删除 ' + w.w);
+}
+function clearCustom(){
+  const n = S.custom.length;
+  if(!n) return;
+  if(!confirm('确定清空「我的词表」？' + n + ' 个词会全部移除,学习进度也会一起删除。')) return;
+  S.custom.splice(0, S.custom.length);
+  const prefix = 'custom::';
+  Object.keys(S.progress).forEach(kk => { if(kk.indexOf(prefix) === 0) delete S.progress[kk]; });
+  const tl = todayLog();
+  Object.keys(tl.ids).forEach(kk => { if(kk.indexOf(prefix) === 0) delete tl.ids[kk]; });
+  const dl = tl.decks.custom;
+  if(dl){
+    tl.new = Math.max(0, tl.new - (dl.new || 0));
+    tl.review = Math.max(0, tl.review - (dl.review || 0));
+    delete tl.decks.custom;
+  }
+  save();
+  renderDeckSelect();
+  closeModal();
+  show('home');
+  toast('已清空我的词表');
 }
 
 /* ================= 事件 ================= */
@@ -6874,6 +7009,10 @@ document.addEventListener('click', function(e){
     case 'import': modalImport(); break;
     case 'settings': modalSettings(); break;
     case 'close': closeModal(); break;
+    case 'undo': undoGrade(); break;
+    case 'customList': modalCustom(); break;
+    case 'delWord': delCustom(parseInt(el.dataset.i, 10)); break;
+    case 'clearCustom': clearCustom(); break;
     case 'doImport': doImport(); break;
     case 'answer': {
       if(!quiz || quiz.picked != null) return;
@@ -6896,6 +7035,12 @@ document.addEventListener('click', function(e){
       Object.keys(S.progress).forEach(kk => { if(kk.indexOf(prefix) === 0) delete S.progress[kk]; });
       const tl = todayLog();
       Object.keys(tl.ids).forEach(kk => { if(kk.indexOf(prefix) === 0) delete tl.ids[kk]; });
+      const dl = tl.decks[deck];          // 今日计数也要跟着清，否则统计还显示旧数字
+      if(dl){
+        tl.new = Math.max(0, tl.new - (dl.new || 0));
+        tl.review = Math.max(0, tl.review - (dl.review || 0));
+        delete tl.decks[deck];
+      }
       save(); closeModal(); show('home');
       toast('已清空「' + META[deck].name + '」的进度');
       break;
@@ -6925,15 +7070,17 @@ document.addEventListener('input', function(e){
 });
 
 document.addEventListener('keydown', function(e){
+  if((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')){ undoGrade(); return; }
   if(!$('#modal').hidden){
     if(e.key === 'Escape') closeModal();
     return;
   }
   if(CUR === 'study' && sess){
     if(e.code === 'Space'){ e.preventDefault(); reveal(); }
-    else if(e.key === '1'){ if(!$('#rateRow').hidden) grade(0); }
-    else if(e.key === '2'){ if(!$('#rateRow').hidden) grade(1); }
-    else if(e.key === '3'){ if(!$('#rateRow').hidden) grade(2); }
+    else if(e.key === '1' || e.key === '2' || e.key === '3'){
+      const row = $('#rateRow');           // 学完一轮后 #rateRow 已不存在，不能直接取 .hidden
+      if(row && !row.hidden) grade(parseInt(e.key, 10) - 1);
+    }
     else if(e.key === 'Escape'){ sess = null; show('home'); }
   }
 });

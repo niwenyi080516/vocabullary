@@ -1,0 +1,13 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 本地验证时生成的临时文件
+_test.html
+.tmp-verify/
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
