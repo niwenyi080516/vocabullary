@@ -241,6 +241,12 @@ h1,h2,h3,p{margin:0}
 .read-note b{color:var(--ink2)}
 .read-note b.g{color:var(--ok)}
 .read-note b.r{color:var(--bad)}
+.read-levels{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+.read-levels .chip{display:inline-flex;align-items:center;gap:6px;flex:none}
+.read-levels .chip i{font-style:normal;font-size:10.5px;opacity:.7;font-weight:600}
+.read-meta{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.read-src{font-size:11px;color:var(--sub);margin-top:16px;line-height:1.6}
+.read-src a{color:var(--accent)}
 
 /* ===== 弹层 ===== */
 .modal{position:fixed;inset:0;z-index:60;background:rgba(8,12,20,.5);display:flex;align-items:flex-end;justify-content:center;padding:0;backdrop-filter:blur(3px)}
@@ -268,6 +274,23 @@ input[type=range]{width:130px;accent-color:var(--accent)}
 input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 .danger{color:var(--bad);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);background:var(--card);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:650}
 .danger:hover{background:var(--bad-soft)}
+
+/* 每天词数：数字输入 + 快捷档 */
+.numwrap{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:12px;background:var(--card);padding:6px 12px}
+.numwrap input[type=number]{
+  width:74px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:17px;font-weight:750;
+  text-align:right;padding:0;-moz-appearance:textfield;
+}
+.numwrap input[type=number]::-webkit-outer-spin-button,
+.numwrap input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.numwrap span{font-size:12.5px;color:var(--sub);font-weight:600}
+.presets{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.chip{
+  font-size:13px;font-weight:700;color:var(--sub);background:var(--bg);
+  border:1px solid var(--line2);border-radius:99px;padding:6px 14px;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 
 /* ===== 我的词表 / 错词库列表 ===== */
 .wrows{max-height:50vh;overflow:auto;margin-top:12px;border-top:1px solid var(--line)}
@@ -10958,52 +10981,57 @@ workshops|/ˈwɝkˌʃɑps/|small workplace where handcrafts or manufacturing are
 york|/ˈjɔrk/|the English royal house (a branch of the Plantagenet line) that reigned from 1461 to 1485; its emblem was a white rose|New York is one of the largest cities in the world.|n.|ielts|0|0|0`;
 
 /* ===== 听读语料（Tatoeba，CC BY 2.0 FR） ===== */
-const READ_RAW = `Mathematics is the part of science you could continue to do if you woke up tomorrow and discovered the universe was gone.
-When the body is touched, receptors in the skin send messages to the brain causing the release of chemicals such as endorphins.
-My roommate is prodigal when it comes to spending money on movies; he buys them the day they're released, regardless of price.
-The second half of a man's life is made up of nothing but the habits he has acquired during the first half.
-We are haunted by an ideal life, and it is because we have within us the beginning and the possibility for it.
-Banks will try to lend you an umbrella on a sunny day, but they will turn their backs on a rainy day.
-If we let our reasoning power be overshadowed by our emotions, we would be barking up the wrong tree all the time.
-If we are to judge the future of ocean study by its past, we can surely look forward to many exciting discoveries.
-On the one hand we suffered a heavy loss, but on the other hand we learned a great deal from the experience.
-The crocodile, which produces only male young in hotter weather, might die out too because there will be no females to breed.
-At the beginning of a marathon race, scores of runners start, but only a few finish and just one takes the cake.
-The most instinctive act of nearly every creature is to protect its young, and with humans, this response persists for a lifetime.
-Even the most graceful and imposing existing buildings may now be so sadly diminished as to seem slightly ridiculous beside the monster.
-In the end, because of the disease, he became unable to walk and had to use a motorized wheelchair to get around.
-If you have a bone to pick with a person, tell it to his face instead of saying things behind his back.
-I have read a good many books to discover what the authorities had to say that made the matter a little plainer.
-The means of communication can include letters, magazine and newspaper advertisements, radio and television commercials, and telephone marketing, as well as catalogs.
-The chief clerk is not a hardworking man, but gets ahead rapidly because he knows how to curry favor with his superiors.
-The loss of childhood spontaneity has caused widespread concern, as well as calls for review of the nation's educational and social structures.
-Since ski season is almost over, the ski wear that's on sale is all leftovers, so there's nothing that's just my size.
-Jim's angry because his date for the movie stood him up and he wasted an hour waiting for her in the rain.
-That, however, tells you just about as much as you would know about water if you were told that it was wet.
-I find the great thing in this world is not so much where we stand as in what direction we are moving.
-This movement has not yet achieved all its goals, but it has already had considerable impact in many areas of male-female relations.
-His utter failure at the last peace conference has taught him to arm himself to the teeth with new tricks and tactics.
-The restraining role that the community once played is losing its force as adults become reluctant to reprimand other people's unruly children.
-If you watch the sun setting on a warm, damp day, you can see the moisture changing the shape of the sun.
-GNP is measured as the total market value of all the goods and service produced by a nation during a specified period.
-The management tended to be too concerned about short-term improvement of the bottom line to have any long-term design for the future.
-Among married couples, there has been an increase in divorce and separation with the result that there are many more one-parent families.
-Lately you see more young couples making out at the train station ticket gates acting as though nobody in the world existed.
-As soon as we are born, the world gets to work on us and transforms us from merely biological into social units.
-We are living in fear, we are suffering, we are not enjoying the sun and flowers, we are not enjoying our childhood.
-I suppose that what we mean by beauty is that object, spiritual or material, more often material, which satisfies our aesthetic sense.
-My grandfather was quite a learned man for his time and place but he just wasn't cut out to be a businessman.
-I was charmed with it, adopted it, dropped my abrupt contradiction and positive argumentation, and put on the humble inquirer and doubter.
-Working in a society gives women both hardship and achievement, but the daily chores at home don't seem to give them fulfillment.
-Young people can recognize this about romantic love, but they find it hard to accept the same fierce element in parental affection.
-At night, she used to dream of the country and the field of daisies and the apple trees dancing in the moonlight.
-A perfect knowledge of a few writers and a few subjects is more valuable than a superficial one of a great many.`;
+const READ_RAW = `243794|四级|Gosum|A recent survey reveals that the population density in the metropolis is decreasing.
+28895|四级|Gosum|Although our universe is still young, theorists are busy exploring its ultimate fate.
+65025|四级|Gosum|Politics is perhaps the only profession for which no preparation is thought necessary.
+18160|四级|cblanken|Hunger compelled the boy to steal money from the cash register.
+729928|四级|cblanken|She has the habit of clearing her throat whenever she's nervous.
+28412|四级|cblanken|Encryption technology has advanced to the point where it's pretty reliable.
+12912409|四级|rul|We have freedom of speech and freedom of thought, but the former is exercised much more than the latter.
+13319769|四级|rul|Globasa's design, reminiscent of the world's creole languages, is the result of the following guiding principles: optimal simplicity, balance, and internationality.
+13319763|四级|rul|Globasa's design is primarily the work of a linguist, translator and expert in adult language acquisition and teaching.
+10826101|四级|Auride|Many species of fish use an organ called the swim bladder, which is filled with gas, to adjust their buoyancy.
+294687|六级|cblanken|When he left the navy, he found it hard to adjust to life ashore.
+300993|六级|Auride|He was out of shape when he took a long hike with his sons, and he was stiff and sore the next day.
+71953|六级|Auride|I regret to say that the product you have asked for is currently out of stock.
+329698|六级|Auride|About how much does it cost to have a dentist remove cigarette tar from your teeth?
+8341661|六级|CK|Tom's mobile phone fell out of his pocket and into the pool when he leaned over to check the water level.
+286863|六级|CK|His dress is that of a gentleman, but his speech and behavior are those of a clown.
+327994|六级|CK|When writing a sentence, generally you start with a capital letter and finish with a period (.), an exclamation mark (!), or a question mark (?).
+3865505|考研|CK|Tom has some hearing loss and finds it difficult to hear speech when there's background noise.
+1094170|考研|CK|Tom eventually figured out how to install a free database application on his computer.
+5725207|考研|CK|I used to work with low income families living in housing projects.
+10604742|考研|Auride|Tamarind is often used as an ingredient in Thai recipes for its sour flavor.
+70846|雅思|Gosum|Your robot will prepare meals, clean, wash dishes, and perform other household tasks.
+549171|雅思|RB|She's making money hand over fist with the business she started.
+3028958|雅思|Delian|The careful use of evocative imagery is an important part of building a successful advertising campaign.
+3028940|雅思|Delian|The screening of donated blood for the presence of various illnesses is expensive, but is also necessary to keep the blood supply as safe as possible.
+67140|雅思|rul|Just because a certain book does not interest readers does not mean that the fault lies in the book.
+10471521|雅思|rul|Academics say a lack of outdoor play is robbing children of vital social skills they’ll need as adults.
+6317598|雅思|rul|I am the one whose literature can be seen even by the blind, and whose words are heard even by the deaf.
+847254|雅思|cblanken|He insists on things being done in the most efficient way and he usually does them that way himself.
+567054|雅思|cblanken|Most of the time, he doesn't get to sleep before two or even three o'clock in the morning.
+847256|雅思|cblanken|Between meals, he usually manages to stow away a generous supply of candy, ice cream, popcorn and fruit.
+11034617|托福|Auride|The same kind of semipermeable membrane that surrounds our cells can form spontaneously from the right mix of phospholipids in water.
+10649630|托福|Auride|My university is celebrating its centennial this year, so you can see banners with its colors, logo, and mascot all over the place.
+274116|托福|Auride|The opposing team did not put up much of a fight, so we won hands down.
+1910427|托福|CK|A middle-aged woman with a knapsack on her back seemed to be looking for a place to sit down.
+6973308|托福|CK|Tom lay down in the grass and looked up at the sky, with his hands behind his head.
+1311601|托福|CK|When you meet someone for the first time, be careful about how close you stand to that person.`;
 
 /* ================= 基础 ================= */
-const IV = [0,1,2,4,7,15,30,60,120];
+/* 两套间隔阶梯（天）。认识的词走正常档；闪过模糊/不认识的词走更密的档，复现更频繁。 */
+const IV       = [0, 1, 2, 4, 7, 15, 30, 60, 120];
+const IV_FUZZY = [0, 0.5, 1, 2, 3, 5, 10, 20, 40];
 const DAY = 86400000;
 const STORE = 'dsword.v1';
 const MASTER = 4;
+/* 同一轮里隔几张卡再出现：不认识最短、模糊适中、认识最长 */
+const GAP_FAIL = 3, GAP_FUZZY = 6, GAP_KNOW = 10;
+/* 连续答对多少次才算过今天：普通 2 次，闪失过的 3 次 */
+const NEED_SOLID = 2, NEED_FUZZY = 3;
+/* 一个词一轮最多出现几次，防止死循环 */
+const MAX_APPEAR = 6;
 
 const META = {
   cet4:  { name:'四级词汇', icon:'📘', en:'CET-4' },
@@ -11017,6 +11045,7 @@ const META = {
 const DECK_IDS = ['cet4','cet6','ky','toefl','ielts'];
 
 const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function shuffle(a){
   for(let i = a.length - 1; i > 0; i--){
@@ -11204,10 +11233,10 @@ function renderHome(){
   let learned = 0, mastered = 0, due = 0, fresh = 0;
   for(let i = 0; i < list.length; i++){
     const r = S.progress[kkey(list[i].w)];
-    if(!r || r.s === 0){ fresh++; continue; }
+    if(!r){ fresh++; continue; }
     learned++;
     if(r.s >= MASTER) mastered++;
-    if(r.due <= now && !tl.ids[kkey(list[i].w)]) due++;
+    if(r.due && r.due <= now && !tl.ids[kkey(list[i].w)]) due++;
   }
   const allowNew = Math.max(0, S.settings.dailyNew - dt.new);
   const newTake = Math.min(allowNew, fresh);
@@ -11245,7 +11274,7 @@ function renderHome(){
         <div>
           <div class="eyebrow">${d.getMonth()+1}月${d.getDate()}日 · ${esc(META[S.deck].name)}</div>
           <h1 class="h-title">${heading}</h1>
-          <p class="sub">${subline}</p>
+          <p class="sub">${subline} · <button class="link" data-act="settings" style="padding:0;font-size:13px;text-decoration:underline">改目标</button></p>
         </div>
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 72 72">
@@ -11299,7 +11328,7 @@ function forecastCounts(){
   const c = [0, 0, 0, 0, 0, 0, 0];
   words().forEach(w => {
     const r = rec(w.w);
-    if(!r || r.s === 0 || !r.due) return;
+    if(!r || !r.due) return;
     let idx = Math.floor((r.due - base) / DAY);
     if(idx < 0) idx = 0;
     if(idx < 7) c[idx]++;
@@ -11325,9 +11354,9 @@ function startSession(mode){
   }else{
     const due = list.filter(w => {
       const r = rec(w.w);
-      return r && r.s > 0 && r.due <= now && !tl.ids[kkey(w.w)];
+      return r && r.due && r.due <= now && !tl.ids[kkey(w.w)];
     });
-    const freshAll = list.filter(w => { const r = rec(w.w); return !r || r.s === 0; });
+    const freshAll = list.filter(w => !rec(w.w));
     const allow = Math.max(0, S.settings.dailyNew - deckToday(S.deck).new);
     const pick = shuffle(freshAll.slice()).slice(0, allow);
     queue = shuffle(due.slice()).map(w => ({ w:w, isNew:false })).concat(pick.map(w => ({ w:w, isNew:true })));
@@ -11338,7 +11367,7 @@ function startSession(mode){
     toast(mode === 'random' ? '暂时没有可复习的词' : (mode === 'all' ? '这里还没有词' : '今天没有要背的词了'));
     return;
   }
-  sess = { queue:queue, i:0, repeats:{}, right:0,
+  sess = { queue:queue, i:0, repeats:{}, appear:{}, right:0,
            mode:(mode === 'random' ? 'random' : (mode === 'all' ? 'all' : 'scheduled')) };
   CUR = 'study';
   window.scrollTo(0, 0);
@@ -11409,25 +11438,70 @@ function reveal(){
   if(hint) hint.hidden = true;
 }
 
-function applyGrade(word, g){
-  const idx = kkey(word);
-  let r = S.progress[idx];
-  if(!r){ r = S.progress[idx] = { s:0, due:0, reps:0, lapses:0, last:0 }; }
+/* 学习状态机
+   s === 0  学习中（还没毕业）：需要连续答对 need 次才毕业
+   s >= 1   复习中：答对一次就往后推一档
+   fz === 1 表示这个词闪过「模糊」或「不认识」，之后走更密的间隔阶梯
+   返回 true 表示这张卡本轮还要再出现一次 */
+function ensureRec(key){
+  let r = S.progress[key];
+  if(!r){ r = S.progress[key] = { s:0, due:0, reps:0, lapses:0, last:0, cs:0, need:NEED_SOLID, fz:0 }; }
+  if(r.cs == null) r.cs = 0;
+  if(r.fz == null) r.fz = 0;
+  if(r.need == null) r.need = r.fz ? NEED_FUZZY : NEED_SOLID;
+  return r;
+}
+function ladderDays(fz, s){
+  const arr = fz ? IV_FUZZY : IV;
+  return arr[Math.max(0, Math.min(s, arr.length - 1))];
+}
+function applyGrade(word, g, key){
+  const r = ensureRec(key);
   const now = Date.now();
-  if(g === 2){
-    r.s = Math.min(r.s + 1, 8);
-    r.due = now + IV[r.s] * DAY;
-  }else if(g === 1){
-    r.s = Math.max(1, r.s);
-    r.due = now + 10 * 3600000;
-  }else{
-    r.s = 1;
-    r.lapses++;
-    r.due = now + 10 * 60000;
-  }
   r.reps++;
   r.last = now;
+  let again = false;
+
+  if(r.s === 0){
+    /* ---- 学习中 ---- */
+    if(g === 2){
+      r.cs++;
+      if(r.cs >= r.need){
+        r.s = 1;                                    // 毕业，进入复习
+        r.due = now + ladderDays(r.fz, 1) * DAY;
+        r.cs = 0;
+      }else{
+        again = true;                               // 认识但还不够次数，隔久一点再来
+      }
+    }else if(g === 1){
+      r.fz = 1; r.need = NEED_FUZZY; r.cs = 0;
+      r.due = now + 10 * 3600000;
+      again = true;                                 // 模糊：间隔适中再出现
+    }else{
+      r.fz = 1; r.need = NEED_FUZZY; r.cs = 0; r.lapses++;
+      r.due = now + 10 * 60000;
+      again = true;                                 // 不认识：尽快再出现
+    }
+  }else{
+    /* ---- 复习中 ---- */
+    if(g === 2){
+      r.s = Math.min(r.s + 1, 8);
+      r.due = now + ladderDays(r.fz, r.s) * DAY;
+      r.cs = 0;
+    }else if(g === 1){
+      r.fz = 1;
+      r.cs = 0;
+      r.due = now + 10 * 3600000;
+      again = true;                                 // 模糊：本轮再见一次
+    }else{
+      r.fz = 1; r.need = NEED_FUZZY; r.cs = 0; r.lapses++;
+      r.s = 1;                                      // 打回第 1 档重新爬
+      r.due = now + 10 * 60000;
+      again = true;
+    }
+  }
   touchStreak();
+  return again;
 }
 
 /* 评分可撤销：只对「认识」保留一次快照，3.5 秒内可回退排期与今日计数 */
@@ -11435,7 +11509,9 @@ function offerUndo(o){
   UNDO = o;
   clearTimeout(undoTimer);
   const t = $('#toast');
-  t.innerHTML = '认识 · ' + IV[S.progress[o.key].s] + ' 天后再复习' +
+  const r = S.progress[o.key];
+  const txt = (r.s === 0 ? '还需连续答对 ' + Math.max(0, r.need - r.cs) + ' 次' : ladderDays(r.fz, r.s) + ' 天后再复习');
+  t.innerHTML = '认识 · ' + txt +
     '<button class="undo" data-act="undo">撤销</button>';
   t.hidden = false;
   undoTimer = setTimeout(function(){ t.hidden = true; UNDO = null; }, 3500);
@@ -11467,13 +11543,13 @@ function grade(g){
   const item = sess.queue[sess.i];
   const key = kkey(item.w.w);
   const casual = sess.mode === 'random';   // 随机复习：只看，不改排期
-  let snap = null, wasNew = false, logAdded = false;
+  let snap = null, wasNew = false, logAdded = false, again = false;
 
   if(!casual){
     const before = S.progress[key];
     snap = before ? Object.assign({}, before) : null;
-    wasNew = !before || before.s === 0;
-    applyGrade(item.w.w, g);
+    wasNew = !before;
+    again = applyGrade(item.w.w, g, key);
     const l = todayLog();
     if(!l.ids[key]){
       l.ids[key] = 1;
@@ -11485,9 +11561,15 @@ function grade(g){
 
   const justAdded = (!casual && g === 0) ? bumpWrong(item.w) : false;
 
-  const times = sess.repeats[key] || 0;
-  if(g === 0 && times < 2){ sess.repeats[key] = times + 1; sess.queue.push({ w:item.w, isNew:false }); }
-  else if(g === 1 && times < 1){ sess.repeats[key] = times + 1; sess.queue.push({ w:item.w, isNew:false }); }
+  /* 本轮内重新插入：按评分给不同间隔，插到当前卡之后第 gap 张的位置 */
+  if(again){
+    sess.appear[key] = (sess.appear[key] || 0) + 1;
+    if(sess.appear[key] < MAX_APPEAR){
+      const gap = g === 0 ? GAP_FAIL : (g === 1 ? GAP_FUZZY : GAP_KNOW);
+      const pos = Math.min(sess.queue.length, sess.i + gap + 1);
+      sess.queue.splice(pos, 0, { w:item.w, isNew:false });
+    }
+  }
 
   sess.i++;
   save();
@@ -11495,7 +11577,7 @@ function grade(g){
 
   if(casual) toast(g === 2 ? '记住了' : (g === 1 ? '再看一遍吧' : '这一轮还会再见到它'));
   else if(g === 2) offerUndo({ key:key, snap:snap, wasNew:wasNew, logAdded:logAdded, deck:S.deck, sess:sess });
-  else if(g === 1) toast('有点模糊 · 10 小时后再来一次');
+  else if(g === 1) toast('有点模糊 · 稍后再来一次');
   else toast(justAdded ? '不认识 · 已收进错词库（累计错满 ' + WRONG_HIT + ' 次）' : '不认识 · 这一轮还会再碰到');
 }
 
@@ -11519,8 +11601,8 @@ function renderDone(){
 /* ================= 测验 ================= */
 function startQuiz(){
   const list = words();
-  const learned = list.filter(w => { const r = rec(w.w); return r && r.s >= 1; });
-  if(learned.length < 4){ toast('先学满 4 个词,再来测验'); return; }
+  const learned = list.filter(w => { const r = rec(w.w); return r && r.reps >= 2; });
+  if(learned.length < 4){ toast('先练几个词,再来测验'); return; }
   const pick = shuffle(learned.slice()).slice(0, 10);
   quiz = {
     items: pick.map(w => ({ w:w, dir: Math.random() < 0.5 ? 'w2m' : 'm2w' })),
@@ -11645,39 +11727,89 @@ function renderStats(){
   </div>`;
 }
 
-/* ================= 听读练习 ================= */
-const READ_BUILTIN = READ_RAW.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+/* ================= 听读练习 =================
+   语料来自 Tatoeba 的真人录音（不是 TTS）。每条带句子 id，音频地址由 id 拼出，
+   加载失败（离线/被墙）时才退回本机语音，并在界面上标注出来。 */
+const READ_BUILTIN = READ_RAW.split('\n').map(function(line){
+  line = line.trim();
+  if(!line) return null;
+  const p = line.split('|');
+  if(p.length >= 4) return { id:p[0], lv:p[1], by:p[2], text:p.slice(3).join('|') };
+  return { id:'', lv:'', by:'', text:line };
+}).filter(Boolean);
+
+const READ_LEVELS = ['全部', '四级', '六级', '考研', '雅思', '托福', '自定义'];
 const WORD_RE = /[A-Za-z][A-Za-z'\u2019-]*/g;
-let readIdx = 0, readMarks = null, readBusy = false, readLoop = false, readTimer = 0, readLast = '';
+let readIdx = 0, readMarks = null, readBusy = false, readLoop = false, readTimer = 0,
+    readLast = '', readLevel = '全部', readAudio = null, readUsingTTS = false;
 
-function readAll(){ return READ_BUILTIN.concat(S.readSent || []); }
-function readWords(text){ return String(text || '').match(WORD_RE) || []; }
-
-function readPlay(slow){
-  const t = readAll()[readIdx];
-  if(!t) return;
-  speak(t, slow ? 0.72 : (S.settings.ttsRate || 0.9), function(){
-    if(readLoop && CUR === 'read') readTimer = setTimeout(function(){ readPlay(slow); }, 300);
-  });
+function readAll(){
+  const custom = (S.readSent || []).map(function(t){ return { id:'', lv:'自定义', by:'', text:t }; });
+  return READ_BUILTIN.concat(custom);
 }
+function readList(){
+  const all = readAll();
+  return readLevel === '全部' ? all : all.filter(function(s){ return s.lv === readLevel; });
+}
+function readWords(text){ return String(text || '').match(WORD_RE) || []; }
+function readAudioUrl(id){ return id ? 'https://audio.tatoeba.org/sentences/eng/' + id + '.mp3' : ''; }
+
 function stopReadAudio(){
   clearTimeout(readTimer);
   readLoop = false;
+  if(readAudio){ try{ readAudio.pause(); }catch(e){} readAudio = null; }
   try{ speechSynthesis.cancel(); }catch(e){}
 }
 
+/* 优先放真人录音；没有录音或加载失败时退回本机语音 */
+function readPlay(slow, onDone){
+  const s = readList()[readIdx];
+  if(!s) return;
+  clearTimeout(readTimer);
+  const done = function(){
+    if(readLoop && CUR === 'read') readTimer = setTimeout(function(){ readPlay(slow); }, 320);
+    if(onDone) onDone();
+  };
+  const url = readAudioUrl(s.id);
+  readUsingTTS = false;
+  if(readAudio){ try{ readAudio.pause(); }catch(e){} readAudio = null; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+
+  if(url && !slow){
+    try{
+      const a = new Audio(url);
+      readAudio = a;
+      a.onended = done;
+      a.onerror = function(){ readUsingTTS = true; readAudio = null; speak(s.text, S.settings.ttsRate || 0.9, done); renderRead(); };
+      const p = a.play();
+      if(p && p.catch) p.catch(function(){ readUsingTTS = true; readAudio = null; speak(s.text, S.settings.ttsRate || 0.9, done); renderRead(); });
+      return;
+    }catch(e){ readUsingTTS = true; }
+  }
+  readUsingTTS = !!(url || slow);
+  speak(s.text, slow ? 0.72 : (S.settings.ttsRate || 0.9), done);
+}
+
 function renderRead(){
-  const list = readAll();
+  const list = readList();
+  const chips = READ_LEVELS.map(function(lv){
+    const n = lv === '全部' ? readAll().length : readAll().filter(function(s){ return s.lv === lv; }).length;
+    return '<button class="chip' + (lv === readLevel ? ' on' : '') + '" data-act="readLv" data-lv="' + lv + '">' +
+      lv + '<i>' + n + '</i></button>';
+  }).join('');
+
   if(!list.length){
-    $('#main').innerHTML = '<div class="wrap pad"><div class="done">' +
-      '<div class="emoji">🎧</div><h2>还没有跟读语料</h2>' +
-      '<p class="sub">点下面的按钮添加一句想练的话</p>' +
-      '<div class="sheet-actions" style="margin-top:20px"><button class="btn primary" data-act="readAdd">添加句子</button></div>' +
-      '</div></div>';
+    $('#main').innerHTML = '<div class="wrap pad">' +
+      '<div class="read-levels">' + chips + '</div>' +
+      '<div class="done"><div class="emoji">🎧</div><h2>这个难度还没有句子</h2>' +
+      '<p class="sub">换个难度，或者自己加一句</p>' +
+      '<div class="sheet-actions" style="margin-top:20px"><button class="btn primary" data-act="readAdd">添加句子</button></div></div>' +
+      '</div>';
     return;
   }
   readIdx = Math.min(Math.max(readIdx, 0), list.length - 1);
-  const text = list[readIdx];
+  const item = list[readIdx];
+  const text = item.text;
   if(readLast !== text){ readMarks = null; readLast = text; }
 
   let wi = 0;
@@ -11708,11 +11840,21 @@ function renderRead(){
       '</div></div>';
   }
 
+  const src = item.id
+    ? '真人录音：' + esc(item.by) + ' · <a href="https://tatoeba.org/en/sentences/show/' + encodeURIComponent(item.id) + '" target="_blank" rel="noopener noreferrer">Tatoeba</a> (CC BY 2.0 FR)'
+    : '自定义句子，没有真人录音，播放使用本机语音合成';
+
   $('#main').innerHTML = '<div class="wrap pad">' +
     '<div class="study-bar"><button class="link" data-act="home">← 返回</button>' +
       '<div class="pbar"><i style="width:' + ((readIdx + 1) / list.length * 100).toFixed(1) + '%"></i></div>' +
       '<span class="tiny">' + (readIdx + 1) + '/' + list.length + '</span></div>' +
-    '<div class="read-card"><p class="read-text">' + body + '</p></div>' +
+    '<div class="read-levels">' + chips + '</div>' +
+    '<div class="read-card">' +
+      '<div class="read-meta">' + (item.lv ? '<span class="badge ox">' + esc(item.lv) + '</span>' : '') +
+      (readUsingTTS ? '<span class="badge">本机语音</span>' : '<span class="badge">真人录音</span>') + '</div>' +
+      '<p class="read-text">' + body + '</p>' +
+      '<p class="read-src">' + src + '</p>' +
+    '</div>' +
     '<div class="read-tools">' +
       '<button class="btn primary" data-act="readPlay">▶ 播放</button>' +
       '<button class="btn ghost" data-act="readSlow">🐢 慢速</button>' +
@@ -11726,7 +11868,7 @@ function renderRead(){
       '<button class="btn ghost" data-act="readAdd">＋ 自定义</button>' +
       '<button class="btn ghost" data-act="readNext">下一句 ›</button>' +
     '</div>' +
-    '<p class="read-note">跟读后按词判定：<b class="g">绿色</b> 发音到位 · <b>黑色</b> 一般 · <b class="r">红色</b> 没说对。点任意单词可单独听发音。语料来自 Tatoeba（CC BY 2.0 FR）。</p>' +
+    '<p class="read-note">跟读后按词判定：<b class="g">绿色</b> 发音到位 · <b>黑色</b> 一般 · <b class="r">红色</b> 没说对。点任意单词可单独听发音。</p>' +
   '</div>';
 }
 
@@ -11775,7 +11917,7 @@ function startReadTest(){
   if(readBusy) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ toast('这个浏览器不支持语音识别，请用 Chrome / Edge'); return; }
-  const text = readAll()[readIdx];
+  const text = (readList()[readIdx] || {}).text || '';
   const target = readWords(text);
   if(!target.length) return;
   readBusy = true;
@@ -11825,7 +11967,7 @@ function startReadTest(){
 
 function modalReadAdd(){
   openModal('<h3>添加跟读句子</h3>' +
-    '<p class="sub">一句一行。可以粘贴想练的台词或长难句。</p>' +
+    '<p class="sub">一句一行。自己加的句子没有真人录音，播放时用本机语音合成。</p>' +
     '<textarea id="readText" placeholder="I never look back, darling. It distracts from the now."></textarea>' +
     '<div class="sheet-actions">' +
       '<button class="btn ghost" data-act="close">取消</button>' +
@@ -11841,7 +11983,8 @@ function doReadAdd(){
   S.readSent = (S.readSent || []).concat(lines).slice(-200);
   save();
   closeModal();
-  readIdx = readAll().length - lines.length;
+  readLevel = '自定义';
+  readIdx = 0;
   readMarks = null;
   readLast = '';
   show('read');
@@ -11951,11 +12094,13 @@ function renderDeckSelect(){
 }
 function modalSettings(){
   openModal(`<h3>设置</h3>
-    <div class="field">
-      <div><label for="dailyNew">每天新词</label><div class="sub">超出部分第二天再安排</div></div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <input type="range" id="dailyNew" min="5" max="60" step="5" value="${S.settings.dailyNew}">
-        <b id="dailyNewVal" style="width:24px;text-align:right">${S.settings.dailyNew}</b>
+    <div class="field" style="display:block">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div><label for="dailyNew">每天要背的词</label><div class="sub">直接填数字，想背多少填多少</div></div>
+        <div class="numwrap"><input type="number" id="dailyNew" min="1" max="500" step="1" value="${S.settings.dailyNew}"><span>个</span></div>
+      </div>
+      <div class="presets">
+        ${[10, 20, 30, 50, 100].map(n => `<button class="chip${n === S.settings.dailyNew ? ' on' : ''}" data-act="setDaily" data-n="${n}">${n}</button>`).join('')}
       </div>
     </div>
     <div class="field">
@@ -12061,6 +12206,13 @@ document.addEventListener('click', function(e){
     case 'stats': show('stats'); break;
     case 'home': show('home'); break;
     case 'read': show('read'); break;
+    case 'readLv': {
+      stopReadAudio();
+      readLevel = el.dataset.lv || '全部';
+      readIdx = 0; readMarks = null; readLast = ''; readUsingTTS = false;
+      renderRead();
+      break;
+    }
     case 'readPlay': readPlay(false); break;
     case 'readSlow': readPlay(true); break;
     case 'readLoop':
@@ -12068,13 +12220,14 @@ document.addEventListener('click', function(e){
       if(readLoop) readPlay(false);
       renderRead();
       break;
-    case 'readPrev': stopReadAudio(); readIdx--; readMarks = null; readLast = ''; renderRead(); break;
-    case 'readNext': stopReadAudio(); readIdx++; readMarks = null; readLast = ''; renderRead(); break;
+    case 'readPrev': stopReadAudio(); readIdx--; readMarks = null; readLast = ''; readUsingTTS = false; renderRead(); break;
+    case 'readNext': stopReadAudio(); readIdx++; readMarks = null; readLast = ''; readUsingTTS = false; renderRead(); break;
     case 'readAdd': modalReadAdd(); break;
     case 'doReadAdd': doReadAdd(); break;
     case 'readStart': startReadTest(); break;
     case 'readWord': {
-      const toks = readWords(readAll()[readIdx] || '');
+      const cur = readList()[readIdx];
+      const toks = readWords(cur ? cur.text : '');
       const word = toks[parseInt(el.dataset.i, 10)];
       if(word) speak(word, 0.8);
       break;
@@ -12158,13 +12311,20 @@ document.addEventListener('click', function(e){
       toast('已清空「' + META[deck].name + '」的进度');
       break;
     }
+    case 'setDaily': {
+      const n = parseInt(el.dataset.n, 10) || 20;
+      const inp = $('#dailyNew');
+      if(inp) inp.value = n;
+      $$('.presets .chip').forEach(b => b.classList.toggle('on', parseInt(b.dataset.n, 10) === n));
+      break;
+    }
     case 'saveSettings': {
       const r = $('#dailyNew'), c = $('#autoSpeak'), sp = $('#ttsRate');
-      if(r) S.settings.dailyNew = parseInt(r.value, 10) || 20;
+      if(r) S.settings.dailyNew = Math.max(1, Math.min(500, parseInt(r.value, 10) || 20));
       if(c) S.settings.autoSpeak = !!c.checked;
       if(sp) S.settings.ttsRate = parseFloat(sp.value) || 0.9;
       save(); closeModal();
-      toast('设置已保存');
+      toast('设置已保存 · 每天 ' + S.settings.dailyNew + ' 个词');
       break;
     }
   }
@@ -12173,8 +12333,8 @@ document.addEventListener('click', function(e){
 document.addEventListener('input', function(e){
   if(!e.target) return;
   if(e.target.id === 'dailyNew'){
-    const v = $('#dailyNewVal');
-    if(v) v.textContent = e.target.value;
+    const n = parseInt(e.target.value, 10);
+    $$('.presets .chip').forEach(b => b.classList.toggle('on', parseInt(b.dataset.n, 10) === n));
   }
   if(e.target.id === 'ttsRate'){
     const v = $('#ttsRateVal');
