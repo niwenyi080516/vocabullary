@@ -302,6 +302,10 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
   color:var(--bad);font-size:15px;line-height:1;display:grid;place-items:center;
 }
 .wrow .x:hover{background:var(--bad-soft);border-color:var(--bad)}
+.tst{font-style:normal;font-size:11px;color:var(--sub);white-space:nowrap;flex:none;text-align:right}
+.dkb{font-style:normal;font-size:10.5px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 4px;margin-right:6px;white-space:nowrap}
+.tile[data-act]{cursor:pointer}
+.tile[data-act]:hover{border-color:var(--accent)}
 
 /* ===== 提示 ===== */
 .toast{
@@ -11222,6 +11226,7 @@ function render(){
   else if(CUR === 'stats') renderStats();
   else if(CUR === 'read') renderRead();
   else if(CUR === 'wrong') renderWrongPage();
+  else if(CUR === 'today') renderToday();
 }
 
 /* ================= 首页 ================= */
@@ -11304,12 +11309,13 @@ function renderHome(){
     ${hero}
     <div class="tiles">
       <div class="tile"><span>已学</span><b>${learned}</b></div>
-      <div class="tile"><span>今日已学</span><b>${doneToday}</b></div>
+      <div class="tile" data-act="today" title="看看今天背了哪些词"><span>今日已学 ›</span><b>${doneToday}</b></div>
       <div class="tile"><span>连续打卡</span><b>${S.streak.count}</b><i>天</i></div>
     </div>
     <div class="actions">
       <button class="act" data-act="quiz"><em>🧠</em>测验</button>
       <button class="act" data-act="read"><em>🎧</em>听读</button>
+      <button class="act" data-act="today"><em>📅</em>今日单词</button>
       <button class="act" data-act="stats"><em>📊</em>统计</button>
       <button class="act" data-act="wrong"><em>⚠️</em>错词库${S.wrong.length ? `<i>${S.wrong.length}</i>` : ''}</button>
       <button class="act" data-act="import"><em>📥</em>导入词表</button>
@@ -11592,6 +11598,7 @@ function renderDone(){
     <p class="sub">今天累计学了 ${dt.new + dt.review} 个词 · 已掌握 ${mastered} 个</p>
     <div class="sheet-actions" style="margin-top:26px">
       <button class="btn ghost" data-act="again">再来一轮</button>
+      <button class="btn ghost" data-act="today">今日单词</button>
       <button class="btn primary" data-act="home">回到首页</button>
     </div>
     <p class="kbd-hint">明天记得回来复习,遗忘曲线会帮你安排</p>
@@ -12015,6 +12022,66 @@ function renderWrongPage(){
     '</div></div>';
 }
 
+/* ================= 今日单词 ================= */
+let WORD_INDEX = null;
+function wordIndex(){
+  if(!WORD_INDEX){
+    WORD_INDEX = new Map();
+    for(let i = 0; i < ALL_WORDS.length; i++) WORD_INDEX.set(ALL_WORDS[i].w.toLowerCase(), ALL_WORDS[i]);
+  }
+  return WORD_INDEX;
+}
+function findWordData(name, dk){
+  const k = String(name).toLowerCase();
+  const pick = function(arr){
+    for(let i = 0; i < arr.length; i++) if(String(arr[i].w).toLowerCase() === k) return arr[i];
+    return null;
+  };
+  if(dk === 'custom') return pick(S.custom);
+  if(dk === 'wrong') return pick(S.wrong);
+  return wordIndex().get(k) || pick(S.custom) || null;
+}
+function wordStatus(r){
+  if(!r) return '未记录';
+  if(r.s === 0){
+    const need = r.need || NEED_SOLID, cs = r.cs || 0;
+    return '学习中 · 还需 ' + Math.max(0, need - cs) + ' 次';
+  }
+  return '复习第 ' + r.s + ' 档' + (r.fz ? ' · 密集' : '');
+}
+function renderToday(){
+  const l = todayLog();
+  const keys = Object.keys(l.ids || {});
+  const decks = {};
+  keys.forEach(function(k){
+    const i = k.indexOf('::');
+    const dk = i > 0 ? k.slice(0, i) : S.deck;
+    decks[dk] = (decks[dk] || 0) + 1;
+  });
+  const multi = Object.keys(decks).length > 1;
+  const rows = keys.map(function(k){
+    const i = k.indexOf('::');
+    const dk = i > 0 ? k.slice(0, i) : S.deck;
+    const name = k.slice(i + 2);
+    const d = findWordData(name, dk);
+    const ph = (d && d.ph) ? '<i class="ipa">' + esc(d.ph) + '</i> ' : '';
+    const mean = (d && d.m) ? esc(String(d.m).slice(0, 72)) : '';
+    const badge = (multi && META[dk]) ? '<em class="dkb">' + esc(META[dk].name.replace('词汇', '')) + '</em>' : '';
+    return '<div class="wrow"><b>' + esc(name) + '</b><span>' + badge + ph + mean + '</span>' +
+      '<em class="tst">' + esc(wordStatus(S.progress[k])) + '</em></div>';
+  }).join('');
+  $('#main').innerHTML = '<div class="wrap pad">' +
+    '<div class="study-bar"><button class="link" data-act="home">← 返回</button>' +
+      '<div class="pbar" style="opacity:0"></div><span class="tiny">' + keys.length + ' 个</span></div>' +
+    '<div class="card section"><h3>今日单词<span class="sub">' + (l.new || 0) + ' 个新词 · ' + (l.review || 0) + ' 次复习</span></h3>' +
+      '<p class="sub">今天动过 ' + keys.length + ' 个词，按学习的先后顺序排列。' +
+        (multi ? '今天跨了 ' + Object.keys(decks).length + ' 本词书。' : '') + '</p>' +
+      (keys.length
+        ? '<div class="wrows">' + rows + '</div>'
+        : '<p class="sub" style="margin-top:14px">今天还没开始背，去学几个吧。</p>') +
+    '</div></div>';
+}
+
 /* ================= 弹层 ================= */
 function openModal(html){
   $('#sheet').innerHTML = html;
@@ -12204,6 +12271,7 @@ document.addEventListener('click', function(e){
     case 'quiz': startQuiz(); break;
     case 'quizAgain': startQuiz(); break;
     case 'stats': show('stats'); break;
+    case 'today': show('today'); break;
     case 'home': show('home'); break;
     case 'read': show('read'); break;
     case 'readLv': {
