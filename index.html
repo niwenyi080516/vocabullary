@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0d9488">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>背单词</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}
@@ -399,6 +402,14 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* ===== 每日提醒 ===== */
+.remind-pop{text-align:center}
+.remind-emoji{font-size:46px;line-height:1.15;margin:4px 0 2px}
+.remind-msg{font-size:15px;line-height:1.8;color:var(--ink2);margin:10px 0 2px;white-space:pre-wrap}
+.rm-row{display:flex;align-items:center;gap:8px}
+.rm-badge{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.rm-badge.off{background:var(--bad-soft);color:var(--bad)}
 </style>
 </head>
 <body>
@@ -11065,44 +11076,607 @@ words|/ˈwɝdz/|the words that are spoken; language that is spoken or written|I 
 workshops|/ˈwɝkˌʃɑps/|small workplace where handcrafts or manufacturing are done; a brief intensive course for a small group; emphasizes problem solving|The museum also offers ongoing professional training workshops for teachers.|n.|ielts|0|0|0
 york|/ˈjɔrk/|the English royal house (a branch of the Plantagenet line) that reigned from 1461 to 1485; its emblem was a white rose|New York is one of the largest cities in the world.|n.|ielts|0|0|0`;
 
-/* ===== 听读语料（Tatoeba，CC BY 2.0 FR） ===== */
-const READ_RAW = `243794|四级|Gosum|A recent survey reveals that the population density in the metropolis is decreasing.
-28895|四级|Gosum|Although our universe is still young, theorists are busy exploring its ultimate fate.
-65025|四级|Gosum|Politics is perhaps the only profession for which no preparation is thought necessary.
-18160|四级|cblanken|Hunger compelled the boy to steal money from the cash register.
-729928|四级|cblanken|She has the habit of clearing her throat whenever she's nervous.
-28412|四级|cblanken|Encryption technology has advanced to the point where it's pretty reliable.
-12912409|四级|rul|We have freedom of speech and freedom of thought, but the former is exercised much more than the latter.
-13319769|四级|rul|Globasa's design, reminiscent of the world's creole languages, is the result of the following guiding principles: optimal simplicity, balance, and internationality.
-13319763|四级|rul|Globasa's design is primarily the work of a linguist, translator and expert in adult language acquisition and teaching.
-10826101|四级|Auride|Many species of fish use an organ called the swim bladder, which is filled with gas, to adjust their buoyancy.
-294687|六级|cblanken|When he left the navy, he found it hard to adjust to life ashore.
-300993|六级|Auride|He was out of shape when he took a long hike with his sons, and he was stiff and sore the next day.
-71953|六级|Auride|I regret to say that the product you have asked for is currently out of stock.
-329698|六级|Auride|About how much does it cost to have a dentist remove cigarette tar from your teeth?
-8341661|六级|CK|Tom's mobile phone fell out of his pocket and into the pool when he leaned over to check the water level.
-286863|六级|CK|His dress is that of a gentleman, but his speech and behavior are those of a clown.
-327994|六级|CK|When writing a sentence, generally you start with a capital letter and finish with a period (.), an exclamation mark (!), or a question mark (?).
-3865505|考研|CK|Tom has some hearing loss and finds it difficult to hear speech when there's background noise.
-1094170|考研|CK|Tom eventually figured out how to install a free database application on his computer.
-5725207|考研|CK|I used to work with low income families living in housing projects.
-10604742|考研|Auride|Tamarind is often used as an ingredient in Thai recipes for its sour flavor.
+/* ===== 听读语料（Tatoeba，CC BY 2.0 FR）：600 条，5 档各 120；音频逐条校验过可用性 ===== */
+const READ_RAW = `269471|四级|Gosum|Before you go hiking in the woods, find out what you should do when you meet a bear.
+317280|四级|RB|She's determined to get back at her friend for stabbing her in the back.
+747257|四级|RB|She's only going to tell you what she thinks you want to hear.
+309939|四级|RB|She's far better off than she was the year before last.
+67244|四级|rul|The best way to know what a country is like is to go and see it with your own eyes.
+11032014|四级|rul|If you want to have a happy life, let go of the fear of death.
+246583|四级|rul|It makes no difference whether you want to do it or not.
+12916492|四级|rul|I think it's time she talk about the problem with the boss.
+13025974|四级|rul|I, we, you, he, she, it, and they are personal pronouns.
+275601|四级|rul|The university decided to do away with this kind of examination.
+6226447|四级|rul|Tom probably doesn't know how to do that as well as I do.
+1132713|四级|rul|While backing up, I bumped into another car and set off its alarm.
+631023|四级|rul|I will give you a good example to illustrate what I mean.
+12042520|四级|rul|We offer help to those people who do not speak Silesian.
+567054|四级|cblanken|Most of the time, he doesn't get to sleep before two or even three o'clock in the morning.
+847250|四级|cblanken|To have more than one problem before him at one time makes him irritable, upset and exasperated.
+1524|四级|cblanken|It is up to you to decide whether we will go there or not.
+885200|四级|cblanken|Why would she go out of her way to help a deadbeat like you?
+54666|四级|cblanken|Where on earth can he have gone off to at this time of day?
+308063|四级|cblanken|It will take her at least two years to be qualified for that post.
+676326|四级|cblanken|How do you console a woman who has just lost her only child?
+39467|四级|cblanken|You can put your talents to good use if you become a designer.
+29149|四级|cblanken|Thank you very much for coming all the way to see me off.
+847212|四级|cblanken|You can always tell what any individual wants most by what he does.
+16386|四级|cblanken|Now that you are grown up, you must not behave like a child.
+267510|四级|cblanken|There was something about that house that made her stop and look again.
+411892|四级|cblanken|When she was a student, she used to go to the disco often.
+16009|四级|cblanken|Since you like to write letters, why don't you drop her a line?
+847194|四级|cblanken|A young man asked us if he could succeed as a public speaker.
+397913|四级|cblanken|All she said was that we would know when the time came.
+16574|四级|cblanken|You will not be able to go through the book so quickly.
+818065|四级|cblanken|I would really like to know why he did something like that.
+682200|四级|cblanken|It was torture for him to see his girlfriend with another man.
+518090|四级|cblanken|He clung to the hope that he would see her again someday.
+23165|四级|cblanken|We must look at the problem from a global point of view.
+17994|四级|cblanken|It makes no difference to me whether you believe it or not.
+36240|四级|cblanken|He may still be young, but he really is a reliable person.
+411894|四级|cblanken|When she was a student, she went to the disco only once.
+260797|四级|cblanken|I thought it best for him to say nothing about the matter.
+490767|四级|cblanken|Day in and day out, he does nothing but tend his sheep.
+50149|四级|cblanken|The tunnel caved in because of the earthquake the other day.
+32794|四级|cblanken|More and more doctors have begun to use the new medicine.
+18566|四级|cblanken|Some people look down on others because they have less money.
+21639|四级|cblanken|They helped one another to make the school festival a success.
+298434|四级|cblanken|He said that he would be eighteen on his next birthday.
+283114|四级|cblanken|It occurred to me that he must have stolen the dictionary.
+30623|四级|cblanken|If my mother were still alive, she would have helped me.
+680572|四级|cblanken|After the accident, they connected him to a lot of machines.
+300185|四级|cblanken|Does he still have that book he borrowed from the library?
+329297|四级|cblanken|Please don't let him know the real name of his illness.
+6138|四级|cblanken|She has always done her best to make their life easier.
+308066|四级|cblanken|It beats me how she could have gotten that secret information.
+311998|四级|cblanken|She told me that she came all the way from Hokkaido to see her brother.
+308750|四级|cblanken|She has some faults, but I love her all the more because of them.
+623254|四级|cblanken|She wouldn't let up until I agreed to go to the movies with her.
+251468|四级|cblanken|As far as I know, she has nothing to do with that scandal.
+18470|四级|cblanken|He said he would give us his decision for sure by Friday.
+6038|四级|cblanken|If you don't want to stay alone, I can keep you company.
+17942|四级|cblanken|I will come on Monday unless you write to the contrary.
+17811|四级|cblanken|Thanks to your help, I could understand the book quite well.
+67214|四级|Auride|The fact that a man lives on the same street with me does not mean he is my friend.
+311660|四级|Auride|She tried to get a tent at the shop, but she could not find the one she wanted.
+29884|四级|Auride|I could tell by the look on his face that he had come on very important business.
+38262|四级|Auride|Every now and then he drops in at this bookstore on his way home from the office.
+30997|四级|Auride|If you happen to hear of anybody that wants to buy a house, please let me know.
+270103|四级|Auride|All men have some natural talent, but the question is whether they can use it or not.
+43752|四级|Auride|He turned the problem over in his mind for three days before he did anything about it.
+239311|四级|Auride|The more you look, the more you will see, and the more interesting they will become.
+61481|四级|Auride|If you happen to be out this way, be sure to call in at my house.
+253276|四级|Auride|I have spent more than two-thirds, if not all, of the money for a new car.
+59111|四级|Auride|It is just out of the question for me to finish the work in a day.
+312007|四级|Auride|She looked in her bag for the key of the house, but could not find it.
+71320|四级|Auride|You can be sure that the money you give them will be put to good use.
+303696|四级|Auride|He is a busy man, so you can only get in touch with him by telephone.
+55623|四级|Auride|This will be a good opportunity for me to use my language skills to my advantage.
+17774|四级|Auride|I don't object to your going out to work, but who will look after the children?
+271144|四级|Auride|What do you think we must do in order to maintain the peace of the world?
+308678|四级|Auride|It seems to be difficult for her to get along with students in the new school.
+296488|四级|Auride|He still writes novels from time to time, but not as often as he used to.
+323884|四级|Auride|The question is not what education is for so much as how you go about it.
+38069|四级|Auride|By the way, did you have any spare time to go sightseeing while you were there?
+239703|四级|Auride|Needless to say, because of the accident, he will stay away from school for a while.
+242354|四级|Auride|I don't know why it took me so long to get over my cold this time.
+248956|四级|Auride|We did our best to help him, but he didn't so much as say thank you.
+239527|四级|Auride|If you run out of cash, you can fall back on your savings in the bank.
+293540|四级|Auride|He used to be well off and generous, but now he lives from hand to mouth.
+322831|四级|Auride|I don't think she could spare the time because she is always busy with her work.
+44411|四级|Auride|We spent all of that night, the next day, and the next night in the cellar.
+241848|四级|Auride|He said that he was busy then, but that he would be free the next day.
+72061|四级|Auride|It must have been something really big for him to strike a triumphant pose like that.
+248766|四级|Auride|We have to put up with a lot of noise when the children are at home.
+248898|四级|Auride|We can stay here for as long as our supplies of food and water hold out.
+286210|四级|Auride|In his opinion, the time will come soon when people will suffer from a water shortage.
+59627|四级|Auride|I wonder if you could tell me if there is a post office in this area.
+255513|四级|Auride|It occurred to me that the man was trying to cheat me out of my money.
+265728|四级|Auride|As a young man, he did not know that he was to become famous later on.
+283405|四级|Auride|Were it not for the fact that he is a billionaire, she would never marry him.
+40803|四级|Auride|Even if you go far away, let's keep in touch with each other over the phone.
+278124|四级|Auride|It is said that the secret of long life is to have something to live for.
+318712|四级|Auride|She said that her husband hit her, but in fact it was the other way around.
+71564|四级|Auride|You will save your father a lot of worry if you simply write him a letter.
+280032|四级|Auride|If it rains on that day, the game will be postponed until the next fine day.
+278950|四级|Auride|Mother was in a bad mood since she could not play golf because of bad weather.
+44329|四级|Auride|The sign says that the police will take your car away if you park it here.
+308427|四级|Auride|It makes no difference to me whether she lives in the city or in the country.
+308680|四级|Auride|It makes no difference to her whether she lives in a city or in the country.
+17117|四级|Auride|The population of your city is about five times as large as that of my town.
+252018|四级|Auride|My friend has had three jobs in a year; he never sticks to anything for long.
+303683|四级|Auride|He picked up a hat and put it on to see how it would look.
+252322|四级|Auride|I want to know how he manages to make such good use of his time.
+35004|四级|Auride|I went all the way to see her only to find her away from home.
+30731|四级|Auride|If it were not for the sun, there would be no life on the earth.
+51193|四级|Auride|Now that you mention it, what happened to that man who used to work here?
+263312|四级|Auride|When we are told not to come, we become all the more eager to go.
+31394|四级|Auride|Now that you are a high school student, you are responsible for what you do.
+64732|四级|Auride|Would you please let me know when it would be convenient for us to meet?
+266433|四级|Auride|Do you feel like going out for a drive in the country over the weekend?
+50570|四级|Auride|Turn to the right at the corner, and you will find it on your left.
+37483|四级|Auride|Can you please tell me why there seem to be two churches in every village?
+41667|四级|Auride|It is up to you to see to it that such a thing doesn't happen.
+3756933|六级|BE|How many litres of petrol does it take to fill your car?
+1570640|六级|RB|She's walking back to the store where she forgot her money.
+322045|六级|rul|We would be happy to send our book to you when it is published.
+12840045|六级|rul|No one is as blind as someone who does not want to see.
+6092575|六级|rul|If current trends continue, the language will likely die in the near future.
+291065|六级|rul|He was going to accept the offer, but thought better of it.
+9848751|六级|rul|A better world for women is a better world for everyone.
+238297|六级|rul|The police took some pictures of the scene of the accident.
+521029|六级|rul|Our surveys indicate that the public would support the proposed legislation.
+10069615|六级|rul|If everyone spoke French, there would be no practical reason to learn any other language.
+12421736|六级|rul|All the countries of Europe carry the name of their invaders.
+16845|六级|cblanken|All you have to do is wait on any customers that come to the shop.
+682323|六级|cblanken|It was a victory for the whole country when he finished first in the race.
+40681|六级|cblanken|Let this smoky air out of the room and let some fresh air in.
+462708|六级|cblanken|The father took the boy by the hand and helped him across the street.
+16039|六级|cblanken|You must cut down on extra expenses in order to live within your means.
+522293|六级|cblanken|He tied his dog up to the tree while he went into the store.
+18768|六级|cblanken|It is said that there will be a big earthquake in the near future.
+304030|六级|cblanken|Every month, he saved ten thousand yen out of his income for his daughter.
+28464|六级|cblanken|Dark as it was, we managed to find our way back to our tent.
+24089|六级|cblanken|They have time to spend with their families or to enjoy their hobbies.
+63288|六级|cblanken|Yesterday the teacher told us that he would give us a test today.
+51282|六级|cblanken|You should have enough sense not to drink, at least during your illness.
+373201|六级|cblanken|I think she probably just thinks of herself as one of the boys.
+283926|六级|cblanken|We have some doubt as to whether he has chosen the right course.
+29656|六级|cblanken|Lincoln ordered that all the slaves in the country should be set free.
+37773|六级|cblanken|It was such a nice day that the street was full of people.
+46730|六级|cblanken|The language of that tribe is as complex as any other human language.
+516147|六级|cblanken|I was dialing his number just as he walked through the door.
+18258|六级|cblanken|If there were no air, man could not live even ten minutes.
+17792|六级|cblanken|It is not surprising that you should be scolded by your teacher.
+18846|六级|cblanken|She became rich by virtue of hard work and good business sense.
+546808|六级|cblanken|What she lacks in charisma she makes up for with hard work.
+15891|六级|cblanken|Don't you know that you are the laughingstock of the whole town?
+28417|六级|cblanken|It was impossible for him to take the picture in the dark.
+542678|六级|cblanken|If you compare him with his older brother, you'll see the difference.
+255657|六级|cblanken|I also found every letter he had ever written to my mother.
+34394|六级|cblanken|There were not more than one hundred passengers on board the ferry.
+245432|六级|cblanken|A few minutes after he finished his work, he went to bed.
+729882|六级|cblanken|He quickly scanned the page for the word he was looking for.
+287382|六级|cblanken|His painting wasn't particularly good, so no one praised him for it.
+21868|六级|cblanken|People traveling abroad always have to get used to new food.
+300649|六级|cblanken|I'm of the opinion that he should apologize to his teacher.
+680658|六级|cblanken|She'll have to delay her education because she lost her job.
+22991|六级|cblanken|We consider it the citizens' legitimate right to have public libraries.
+23027|六级|cblanken|We were disappointed because we could not carry out our plan.
+309495|六级|cblanken|There was something about her voice that made us feel uneasy.
+326466|六级|cblanken|The old lady thanked me for helping her across the road.
+681424|六级|cblanken|How many gifts do you think she received last holiday season?
+456589|六级|cblanken|She bought some paper that she could use for writing letters.
+60935|六级|cblanken|It must have been difficult for her to knit this sweater.
+290224|六级|cblanken|He didn't keep his promise that he would telephone me soon.
+711237|六级|cblanken|He doesn't realize that he doesn't have time for these things.
+320907|六级|cblanken|The mother greatly missed her daughter, who was away at college.
+18748|六级|cblanken|I would like to repay your kindness in the near future.
+18752|六级|cblanken|There is no telling what will happen in the near future.
+46969|六级|cblanken|She was superstitious, as the people of that period usually were.
+19898|六级|cblanken|The guests wished the happy couple a long and prosperous life.
+16685|六级|cblanken|You are not excused from the responsibility for this serious situation.
+48962|六级|cblanken|Turn left at the next corner, and you'll find the station.
+283402|六级|cblanken|The moment he arrived at the station, it began to rain.
+890164|六级|cblanken|Babies can become dehydrated from a high fever, so I was told that it would be better to send him to the hospital.
+18757|六级|cblanken|In the near future, we will be able to put an end to AIDS.
+261315|六级|cblanken|I like her sense of style. Her clothes and makeup always look good.
+741597|六级|cblanken|I'm not sure what's wrong. We should have heard from him by now.
+46615|六级|cblanken|The teacher had her eye on me because she thought I was cheating.
+247001|六级|cblanken|What I told you about him also holds true for his brother.
+20266|六级|cblanken|The train was delayed, so I could not arrive there on time.
+257935|六级|Auride|I said all along that he was not a person to be trusted, but you would not listen to me.
+10627882|六级|Auride|Some species will copulate whenever the opportunity presents itself, while others only do so at a specific time of the year.
+325044|六级|Auride|I have just received a letter from a friend saying that she is coming to see me next week.
+239949|六级|Auride|When we are away from home, nothing gives us more pleasure than to receive a parcel from home.
+38448|六级|Auride|In the end, because of the disease, he became unable to walk and had to use a motorized wheelchair to get around.
+265762|六级|Auride|As is often the case with young men, he does not pay much attention to his health.
+244754|六级|Auride|I don't know what went on last night, but they're not speaking to each other this morning.
+22139|六级|Auride|We went to the theater early, so we could be sure that everyone could get a seat.
+302279|六级|Auride|From the moment he arrived there, he kept on bothering his doctor to tell him when he would be able to go home.
+240357|六级|Auride|As a result of a traffic jam, he wasn't able to see her off at the station.
+263495|六级|Auride|During the test, she felt very sick, so she got a pass to go to the toilet.
+290619|六级|Auride|He rose through the ranks to the top position at the company where he started his career.
+276689|六级|Auride|If you buddy up to everybody and anybody, pretty soon people will think you're just a people-pleaser.
+296068|六级|Auride|He didn't say anything as to whether he was going to pay in cash or by check.
+274640|六级|Auride|You don't have to think you aren't going to make it just because others have failed.
+271203|六级|Auride|There are many people in the world who complain that they are too busy to read.
+251971|六级|Auride|I was called into the office first, my name being at the head of the list.
+40639|六级|Auride|To give up smoking is not easy, but you should for the sake of your health.
+273098|六级|Auride|At the party the other night, my brother drank a bit too much and passed out.
+47643|六级|Auride|Be sure to keep in mind that you're supposed to complete the work within a week.
+35338|六级|Auride|As there was no bus service, we had to walk all the way to the station.
+262101|六级|Auride|I make it a rule to take a walk around the nearby pond in the evening.
+274833|六级|Auride|In many countries, the main reason that people come to big cities is because of work.
+10693705|六级|Auride|You can adduce studies and reports all you like, but their sophistry will always win out.
+54616|六级|Auride|It is not safe for a girl to go out by herself so late at night.
+68615|六级|Auride|I get depressed thinking that a guy like our boss can have ultimate power over us.
+286791|六级|Auride|When his food supply ran short, he had to look for a new place to live.
+251258|六级|Auride|I received a letter from him to the effect that he could not accept my offer.
+34761|六级|Auride|Whoever the pitcher may be, he will not be able to strike out our best hitter.
+292211|六级|Auride|No matter how hard he may work, he will not be able to pass the exams.
+318577|六级|Auride|We had a good many anxious moments, but everything turned out all right in the end.
+17955|六级|Auride|If you were to fall from that bridge, it would be almost impossible to rescue you.
+288824|六级|Auride|His speech went on for such a long time that some people began to fall asleep.
+325657|六级|Auride|Our parents took care of us and now it's our turn to take care of them.
+295539|六级|Auride|He was so intent on money-making that he had no time to think of anything else.
+313142|六级|Auride|It is difficult for us to get along with her, because she is hard to please.
+237980|六级|Auride|It is needless to say that an experienced person will do better than someone without experience.
+254430|六级|Auride|I was going to speak to his father about that matter, but thought better of it.
+240804|六级|Auride|What with good fortune, and his own effort, he won the first prize in the contest.
+286363|六级|Auride|His wife now had to take care of his grandfather, not to mention their two children.
+49783|六级|Auride|Bear in mind that, under such circumstances, we have no alternative but to find another buyer.
+30674|六级|Auride|She would have fallen into the pond if he had not caught her by the arm.
+33409|六级|Auride|I made a thermos full of coffee so you can take it along with your lunch.
+236772|六级|Auride|If it had not been for his timely hit, our team would have lost the game.
+249601|六级|Auride|Our new product has received a lot of attention from all who have heard about it.
+300456|六级|Auride|He is proud of the fact that he has never consulted a doctor in his life.
+243908|六级|Auride|The last to leave was a tall man, with a pale face and smooth, black hair.
+49133|六级|Auride|He got into the habit of smoking soon after he got a job in the company.
+22336|六级|Auride|In conversation, one is likely to find out certain things about the other person quite easily.
+296398|六级|Auride|He attended the high school for three years without missing a single day or being late.
+251700|六级|Auride|My father makes it a rule to read a few pages before he goes to bed.
+67940|六级|Auride|Those birds build their nests in the summer and fly to the south in the winter.
+13549529|考研|amychang|I hate going shopping because you always make me tote around everything you buy.
+65025|考研|Gosum|Politics is perhaps the only profession for which no preparation is thought necessary.
+6228158|考研|rdgscratch|You didn't know you weren't supposed to do that today, did you?
+9849071|考研|NurseMeeks|Efferent neurons travel away from the brain to effect their target organs.
+3028958|考研|Delian|The careful use of evocative imagery is an important part of building a successful advertising campaign.
+3028940|考研|Delian|The screening of donated blood for the presence of various illnesses is expensive, but is also necessary to keep the blood supply as safe as possible.
+388293|考研|RB|She's popular, not because she's beautiful, but because she's kind to everyone.
+1053692|考研|RB|She's not here for the purpose of defending herself against these accusations.
+12912409|考研|rul|We have freedom of speech and freedom of thought, but the former is exercised much more than the latter.
+13005810|考研|rul|To learn a foreign language well, it is essential not to be afraid of making mistakes.
+12995859|考研|rul|Could anything be more beautiful than a furry seal pup, white as snow?
+283299|考研|rul|If he were a little younger, he would be eligible for the post.
+45506|考研|rul|All the students of the university have access to the university library.
+4846363|考研|rul|The nurse was a witch, though the king did not know it.
+58552|考研|rul|I don't think that you did all this homework by yourself.
+453906|考研|rul|On the edge of the cliff bloom the most beautiful flowers.
+731863|考研|rul|My native language is the most beautiful gift from my mother.
+10127483|考研|rul|We live in an age where everything is settled through violence.
+7355957|考研|rul|The workers began a sit-down strike in front of the factory.
+11321589|考研|rul|People don't hate you because you tell the truth; it's the opposite. People hate you because you lie constantly.
+12503198|考研|rul|As a child, I always considered the tender to be the most fascinating part of a steam train.
+2866038|考研|rul|The whole world is a very narrow bridge. The main thing is to fear nothing.
+11047277|考研|rul|Facebook controls your screen life. Meta will control your whole life.
+596295|考研|cblanken|I admit he's smart, but does he have to talk over everyone's heads all the time?
+729875|考研|cblanken|It used to be that a girl could only marry if she had a dowry.
+238494|考研|cblanken|In spite of the heavy snow, she came all the way to the station.
+311987|考研|cblanken|She left her bag behind on the rack when she got off the train.
+484050|考研|cblanken|My mother hummed to herself as she went about her cooking in the kitchen.
+18224|考研|cblanken|Is it possible to take a shuttle bus from the airport to the hotel?
+294687|考研|cblanken|When he left the navy, he found it hard to adjust to life ashore.
+22598|考研|cblanken|Please advise us, if possible, of a company which has developed image processing software.
+436939|考研|cblanken|I saw him last night in the bar and he was really drunk.
+41116|考研|cblanken|Tires wear down because of friction between the rubber and the road surface.
+17077|考研|cblanken|Your argument is not any more convincing than that of my stubborn father.
+21047|考研|cblanken|I can't think of the right words with which to express my thanks.
+678262|考研|cblanken|She perused a magazine while waiting for her date to show up.
+497996|考研|cblanken|I think that it's completely understandable if she turns down his offer.
+847201|考研|cblanken|He enjoys his sleep and doesn't like to have it interfered with.
+567801|考研|cblanken|I finally overcame my shyness and asked him out on a date.
+288606|考研|cblanken|I hear he was set free after doing five years in prison.
+17086|考研|cblanken|It is important that you attach your photo to the application form.
+639401|考研|cblanken|She knew that if she started to cry her mascara would run.
+681519|考研|cblanken|The bus was already in motion when he tried to board it.
+329205|考研|cblanken|I clutched her to my chest, and kissed her on her forehead.
+741565|考研|cblanken|She took me under her wing and taught me everything she knows.
+539155|考研|cblanken|I've given him the benefit of the doubt one too many times.
+20832|考研|cblanken|The geyser sends up a column of hot water every two hours.
+16058|考研|cblanken|You had better take into consideration that you are no longer young.
+713018|考研|cblanken|He didn't divulge the information, not even under pain of torture.
+682219|考研|cblanken|After hearing the tragic news, he went outside to be alone.
+40801|考研|cblanken|Whenever you visit him, you will find him playing video games.
+19222|考研|cblanken|The aggressive salesman urged me to sign the contract right away.
+804050|考研|cblanken|The senators were very interested in what he had to say.
+298333|考研|cblanken|He fully realizes that he was the cause of the accident.
+558756|考研|cblanken|He sings so well that it's impossible to hold back tears.
+302951|考研|cblanken|He had to part with his secretary when she got married.
+18998|考研|cblanken|With the bridge destroyed, there was nothing to do but swim.
+18160|考研|cblanken|Hunger compelled the boy to steal money from the cash register.
+860648|考研|cblanken|Favoring one gender over another won't win you any friends here.
+680262|考研|cblanken|He wanted his ashes spread over the ocean after he died.
+17806|考研|cblanken|What happened to the girl you were sharing the bedroom with?
+27380|考研|cblanken|After a year's practice, she plays the piano after a fashion.
+729928|考研|cblanken|She has the habit of clearing her throat whenever she's nervous.
+404082|考研|cblanken|I not only gave him some advice, I also gave him a bicycle.
+41503|考研|cblanken|I wish you wouldn't drive so fast. You're making the baby sick!
+639024|考研|cblanken|He says he's got to get to Vienna the day after tomorrow.
+317562|考研|cblanken|Don't make fun of her. She just chugged three bottles of beer.
+18492|考研|cblanken|Apart from earning money, I have no interest in real estate.
+11125301|考研|Auride|Even if you removed every other source of latency in a network, you must contend with the speed of light.
+289277|考研|Auride|He got tired of being the devil's advocate and now agrees with every idea they suggest, no matter how dumb.
+240562|考研|Auride|I expect you can tell from the quoted text, but this is a book written in a colloquial style.
+10545039|考研|Auride|A step change in the feed rate of one reactant results in a gradual change in the reaction rate.
+323432|考研|Auride|I don't know if it will be fine tomorrow, but if it is fine we'll go on a picnic.
+274486|考研|Auride|In order to keep our feet warm we had to shift from one foot to another and keep moving.
+241800|考研|Auride|We don't have time to finish checking the figures now, but we can go over them after lunch.
+18377|考研|Auride|If you're not prepared to take the trouble to learn how to train a dog, don't get one.
+45377|考研|Auride|The man went to pieces when the judge said he would have to go to prison for life.
+267913|考研|Auride|A perfect knowledge of a few writers and a few subjects is more valuable than a superficial one of a great many.
+324936|考研|Auride|He sent me a letter to the effect that his poultry farm would go bankrupt sooner or later.
+67201|考研|Auride|If you watch the sun setting on a warm, damp day, you can see the moisture changing the shape of the sun.
+10888553|考研|Auride|Topaz is a fairly hard gemstone, but it can break with relatively little force if you strike it at the right angle.
+270411|考研|Auride|The people crowded round the injured man, but they made way for the doctor when he reached the scene of the accident.
+11034644|考研|Auride|She used her telepathy to send out a distress signal to everyone in the valley, telling them to defend themselves if necessary.
+268217|考研|Auride|In preparation for painting a portrait, my friend takes many photographs in order to study the subject closely.
+272612|考研|Auride|If you whip the steering wheel around like that on a snowy road, the car is going to go into a slide.
+10614256|考研|Auride|I remember in art class in elementary school, we were made to wear smocks so our clothes wouldn't get splattered with paint.
+42321|考研|Auride|It had the head of a woman, the body of a lion, the wings of a bird, and the tail of a serpent.
+26666|考研|Auride|Although rainforests make up only two percent of the earth's surface, over half the world's wild plant, animal and insect species live there.
+329207|考研|Auride|Being too busy with work is a problem, but then so is having too much free time.
+10867898|考研|Auride|It's good to donate blood frequently, but you have to take in more iron to prevent anemia.
+302050|考研|Auride|He seems to have a habit of getting on his coworker's back when he makes a mistake.
+10614275|考研|Auride|Without an emulsifier to keep them from separating, oil and water always return to a heterogeneous mixture.
+265441|考研|Auride|He would still be alive if he had been wearing his seat belt when the car crashed.
+30850|考研|Auride|If the plant is completed next year, a new production manager will have to be hired.
+51287|考研|Auride|Please forward this message along with the seminar information to the appropriate managers in your firm.
+300448|考研|Auride|He is by nature a kind person and is popular with the children in his neighborhood.
+238195|考研|Auride|The man who she knew was wanted by the police suddenly appeared at the back door.
+67734|考研|Auride|I was wondering if you could give me a lift, if it isn't too much trouble.
+247618|考研|Auride|Our teacher was a beautiful lady, but was not the type of person who dressed up.
+58347|考研|Auride|The newspaper began to lose readers when it dispensed with one of its most popular writers.
+10627984|考研|Auride|Tax assessors must account for a variety of factors when determining the value of a property.
+31523|考研|Auride|Another interesting source of energy is the heat that can be recovered from radioactive waste material.
+266194|考研|Auride|You have to fill out an application for admission to the hospital at the front desk.
+244235|考研|Auride|The attitude of the court toward young criminals is different from its attitude toward adult criminals.
+28283|考研|Auride|The committee stayed up late last night trying to work out measures that would please everyone.
+30987|考研|Auride|If the delay is simply an oversight, will you please take care of it at once?
+27763|考研|Auride|It has been raining since the day before yesterday, but it may clear up this afternoon.
+50512|考研|Auride|It turned out that the cards were stacked against her from the beginning of the game.
+272219|考研|Auride|There was something written on the stone, and they tried to make out what it was.
+10604687|考研|Auride|The pommel screws onto the end of the tang to hold the handle and sword together.
+296166|考研|Auride|He returned to his native village, where he spent the last few years of his life.
+10867885|考研|Auride|Ospreys can dive full speed into water, surface just moments later, and then immediately take flight.
+247646|考研|Auride|A clean river flows through our town, and we can see many carp swimming in it.
+269942|考研|Auride|A man's worth lies not so much in what he has as in what he is.
+64550|考研|Auride|For people who dislike the idea of giving money, a gift certificate is a good idea.
+242386|考研|Auride|This time he dressed down, having realized that the smart suit would be out of place.
+296762|考研|Auride|He was a writer who had never lived up to the promise of his first novel.
+30069|考研|Auride|The true secret of writing a good letter is to write as if you were talking.
+40500|考研|Auride|Rather than doing any good, the rain did a great deal of harm to the crop.
+275562|考研|Auride|I had to take a taxi because the heavy rain caused all the trains to stop.
+3287896|雅思|BE|Tom left his car in the long-stay car park before catching his flight.
+2040149|雅思|PaulP|Like a bolt of lightning, a haiku struck me this morning, then vanished.
+247906|雅思|rhys_mcg|We are speaking on behalf of the young people of Australia.
+273134|雅思|Gosum|I regret that a previous engagement prevents me from accepting your kind invitation.
 70846|雅思|Gosum|Your robot will prepare meals, clean, wash dishes, and perform other household tasks.
+243794|雅思|Gosum|A recent survey reveals that the population density in the metropolis is decreasing.
+327374|雅思|Gosum|Some residents took a wait-and-see attitude while others prepared for heavy flooding.
+1311679|雅思|RB|She's been practicing piano for a year and can play the piano a bit.
+311646|雅思|RB|She's very good at tennis, but she's not much of a swimmer.
+317456|雅思|RB|She's thinking of taking a couple of courses at a cooking school.
 549171|雅思|RB|She's making money hand over fist with the business she started.
-3028958|雅思|Delian|The careful use of evocative imagery is an important part of building a successful advertising campaign.
-3028940|雅思|Delian|The screening of donated blood for the presence of various illnesses is expensive, but is also necessary to keep the blood supply as safe as possible.
 67140|雅思|rul|Just because a certain book does not interest readers does not mean that the fault lies in the book.
-10471521|雅思|rul|Academics say a lack of outdoor play is robbing children of vital social skills they’ll need as adults.
 6317598|雅思|rul|I am the one whose literature can be seen even by the blind, and whose words are heard even by the deaf.
+13319763|雅思|rul|Globasa's design is primarily the work of a linguist, translator and expert in adult language acquisition and teaching.
+5322291|雅思|rul|Spacesuits supply astronauts with oxygen to breathe while they are in the vacuum of space.
+6159774|雅思|rul|A good marriage is that in which each appoints the other guardian of his solitude.
+9994669|雅思|rul|Seen in broad daylight, the leader of the flock is nothing more than a sheep.
+2229502|雅思|rul|You'll never be able to revive someone who is only pretending to be dead.
+425079|雅思|rul|Humor can be dissected, as a frog can, but the thing dies in the process and the innards are discouraging to any but the pure scientific mind.
+13319766|雅思|rul|Globasa has been created with the average world citizen in mind to be as easy as possible to learn and to use without sacrificing clarity and degree of expressiveness.
+7990830|雅思|rul|And the ark rested in the seventh month, on the seventeenth day of the month, upon the mountains of Ararat.
+13319772|雅思|rul|We are working to increase the number of resources available for learning and using Globasa.
+13319760|雅思|rul|Since then, Globasa has undergone further development with the help and collaboration of the auxlang community, but has otherwise remained relatively stable and true to its vision.
+8480565|雅思|rul|Dub actors are being sought for the Chinese version of the film.
+1214430|雅思|rul|It was once thought that there was intelligent life on Mars.
 847254|雅思|cblanken|He insists on things being done in the most efficient way and he usually does them that way himself.
-567054|雅思|cblanken|Most of the time, he doesn't get to sleep before two or even three o'clock in the morning.
 847256|雅思|cblanken|Between meals, he usually manages to stow away a generous supply of candy, ice cream, popcorn and fruit.
-11034617|托福|Auride|The same kind of semipermeable membrane that surrounds our cells can form spontaneously from the right mix of phospholipids in water.
-10649630|托福|Auride|My university is celebrating its centennial this year, so you can see banners with its colors, logo, and mascot all over the place.
-274116|托福|Auride|The opposing team did not put up much of a fight, so we won hands down.
-1910427|托福|CK|A middle-aged woman with a knapsack on her back seemed to be looking for a place to sit down.
-6973308|托福|CK|Tom lay down in the grass and looked up at the sky, with his hands behind his head.
-1311601|托福|CK|When you meet someone for the first time, be careful about how close you stand to that person.`;
+455965|雅思|cblanken|If she expects them to give her five days off work with pay, she's going to be disappointed.
+847249|雅思|cblanken|Most of the plain, simple, everyday things he desires can be secured by people of average means.
+15997|雅思|cblanken|You should have known better than to take an examination without preparing for it.
+680227|雅思|cblanken|When the girl was lost, her parents appealed to the public for information.
+291465|雅思|cblanken|He did it, and what was more surprising, he did it by himself.
+539481|雅思|cblanken|If he keeps drinking like that, he'll have to take a taxi home.
+26634|雅思|cblanken|The media got wind of a rumor about his engagement and came quickly.
+869676|雅思|cblanken|I can't believe how hard it is to find decent grub around here.
+417953|雅思|cblanken|However, the princess had barricaded herself in her room and wouldn't come out.
+897257|雅思|cblanken|While he was talking, there was the sound of a shot being fired.
+297018|雅思|cblanken|As soon as work is over, he makes a beeline for the pub.
+792599|雅思|cblanken|I've no way of telling whether or not what he says is true.
+307996|雅思|cblanken|It's not as though the world is going to end if she leaves.
+640823|雅思|cblanken|She has a real knack for getting people to do what she wants.
+526835|雅思|cblanken|In spite of our encouragement, he decided to throw in the towel.
+46324|雅思|cblanken|The boy was good at mathematics so everybody considered him a genius.
+462956|雅思|cblanken|The teacher said that he wouldn't give us an exam this week.
+22201|雅思|cblanken|The cost of flying overseas has risen with the cost of fuel.
+463226|雅思|cblanken|They sent him to jail for all the crimes he had committed.
+14530|雅思|cblanken|You told her that you had finished the work three days before.
+45830|雅思|cblanken|It was not until the baby was fed that he stopped crying.
+25067|雅思|cblanken|He's given to going overboard every time he gets a new idea.
+309873|雅思|cblanken|She said she was walking through the woods, looking for wild flowers.
+30886|雅思|cblanken|If you had parked your car here, you would have been fined.
+681810|雅思|cblanken|The lawyer's job is to prove that her client is innocent.
+21017|雅思|cblanken|Fear of pollution discouraged people from building homes near power plants.
+263403|雅思|cblanken|The poet expressed his burning passion for the woman he loved.
+39114|雅思|cblanken|The door opened and there she was, standing in the doorway.
+28412|雅思|cblanken|Encryption technology has advanced to the point where it's pretty reliable.
+19375|雅思|cblanken|The fisherman exaggerated the size of the fish he had caught.
+305026|雅思|cblanken|The manual they asked him to read was two inches thick.
+22924|雅思|cblanken|We agreed to refrain from smoking while we are at work.
+47000|雅思|cblanken|From that moment on, he felt undying hatred for his oppressors.
+18854|雅思|cblanken|It goes without saying that diligence is a key to success.
+22199|雅思|cblanken|If you are going abroad, it's necessary to have a passport.
+558336|雅思|cblanken|All her carefully made plans began to unravel one by one.
+876008|雅思|cblanken|He just moved into an apartment he inherited from his parents.
+665571|雅思|cblanken|The detective I hired called to tell me he has a promising lead.
+536239|雅思|cblanken|He read into my words a message that I hadn't intended.
+10826101|雅思|Auride|Many species of fish use an organ called the swim bladder, which is filled with gas, to adjust their buoyancy.
+10627864|雅思|Auride|They received a windfall as recompense for false imprisonment, but it doesn't even begin to make up for lost time.
+10826048|雅思|Auride|If you go digging, it's not hard to find prehistoric arrowheads made of stone just about anywhere in the world.
+245863|雅思|Auride|Knowing how much school for my kids is costing, it's impossible to relax with a beer and take it easy.
+326871|雅思|Auride|A brewery we finance has made a new sweet sake and brought some to us asking us to try it.
+10649766|雅思|Auride|The polishing compound abrades away tiny imperfections in the surface of the metal, leaving it with a mirror finish.
+11034693|雅思|Auride|The simplicity, reliability, and effectiveness of their design would make it the yardstick against which all future firearms would be judged.
+11034662|雅思|Auride|An investigation determined that extrinsic factors caused the building to collapse, rather than a flaw in its internal structure or materials.
+11034617|雅思|Auride|The same kind of semipermeable membrane that surrounds our cells can form spontaneously from the right mix of phospholipids in water.
+2457542|雅思|Auride|He can't tell a cherry tree from a plum tree, but he can name them in twelve languages.
+10660555|雅思|Auride|A person's reputation can be greatly burnished or tarnished depending on how the media chooses to cover them.
+10660637|雅思|Auride|When you were a contractor, you were paid in advance, but when working for a salary, you will be paid in arrear.
+31124|雅思|Auride|A motel is like a hotel only much smaller and is used mostly by people traveling by automobile.
+10693684|雅思|Auride|As a commuter, it can be difficult to make friends with the other students, who are mostly boarders.
+10867903|雅思|Auride|Garrulous as he may have been, that old philosopher made some very poignant arguments about economics and society.
+11125286|雅思|Auride|I don't think this business could have succeeded without my keen, calculating partner to counterbalance my adventurous nature.
+10826077|雅思|Auride|Plants have no blood, but they do still have a vascular system, which transports water, nutrients, and other substances around their bodies.
+10763434|雅思|Auride|I was surprised to learn that a stingray can actually regenerate its stinger if it gets broken off.
+24179|雅思|Auride|After tying up loose ends on the house, the carpenter gave the painter approval to begin work.
+300993|雅思|Auride|He was out of shape when he took a long hike with his sons, and he was stiff and sore the next day.
+11125394|雅思|Auride|I crimped a ferrule around the end of the stranded brake cable to prevent it from fraying.
+10888588|雅思|Auride|Induction to our society requires the renunciation of all other allegiances, including to one's country and family.
+10649630|雅思|Auride|My university is celebrating its centennial this year, so you can see banners with its colors, logo, and mascot all over the place.
+10888376|雅思|Auride|Pretty much any thin, pliable material can be used to make wicker furniture, but many prefer those made with willow or rattan to plastic.
+294288|雅思|Auride|He gave away his entire fortune to an old friend's daughter, and expected nothing in return.
+11034629|雅思|Auride|Data from the many parts of this fragmentary telescope are combined to form a single image.
+308633|雅思|Auride|I got together with her mainly because we seemed to share the same feelings about things.
+320557|雅思|Auride|Her eyes shone with joy when she saw that her mother was not mad at her.
+240481|雅思|Auride|The bank rate cut is expected to relieve the severe financial squeeze that has hit industry.
+271342|雅思|Auride|Any student who wishes to review his grades may make an appointment with the college dean.
+317482|雅思|Auride|She was taken in by that fake gold certificate scandal and lost most of her money.
+283511|雅思|Auride|He came back not because he was homesick, but because he was running short of money.
+10660716|雅思|Auride|Over time, itinerant groups often develop their own language and culture distinct from their settled counterparts.
+11125289|雅思|Auride|This fighting game is beautiful, but nobody will play it because of the atrocious input latency.
+269079|雅思|Auride|The project to build a new sports center has fallen through for lack of adequate funds.
+295955|雅思|Auride|He's a really straight-laced guy, so he doesn't like the idea of his son changing jobs.
+274917|雅思|Auride|Many rivers have been so polluted that they can no longer be used for drinking water.
+275860|雅思|Auride|Part of the charm of a big city lies in the variety of styles that can be seen in the architecture of its buildings.
+284161|雅思|Auride|He had no sooner gone out of the room than all of them burst out laughing.
+311419|雅思|Auride|It was not until she finished reading the book that she noticed who had written it.
+65543|雅思|Auride|When it comes to my supervisor, he's very inconsistent, so we never get any work done.
+27771|雅思|Auride|It is important for a nation to have an adequate mix of monetary and fiscal policies.
+55342|雅思|Auride|Our company has never had that kind of system, and it's never made us feel uncomfortable.
+321065|雅思|Auride|Legal services will be provided by lawyers and other experts to be appointed by the government.
+10614293|雅思|Auride|There are a lot of companies that will offer to buy part or all of an annuity in exchange for a lump sum payment.
+326019|雅思|Auride|The cones of the jack pine, for example, do not readily open to release their seeds until they have been subjected to great heat.
+304661|雅思|Auride|He made it known to his friends that he was unwilling to run for the election.
+271143|雅思|Auride|The world's tropical rainforests are critical links in the ecological chain of life on the planet.
+10614387|雅思|Auride|Those who were banished from the country were required to forever abjure their right to return.
+21320|雅思|Auride|The school uniform is convenient because it can be worn for both informal and formal occasions.
+20040|雅思|Auride|It was not what he said, but the way he said it that made me suspicious.
+329081|雅思|Auride|Horses used to pull road-rollers, but the steamroller arrived with the invention of the steam engine.
+324302|雅思|Auride|Who can read the heroic deeds of brave men without a feeling of respect and admiration?
+10614286|雅思|Auride|Circular water currents at the base of a weir can trap people, causing them to drown.
+28895|托福|Gosum|Although our universe is still young, theorists are busy exploring its ultimate fate.
+3028959|托福|Delian|Tom was having trouble trying to find his best pair of cuff links.
+13549531|托福|amychang|Although Italian dressing looks uniform after you shake it, it's actually an emulsion and will separate into layers over time.
+13084553|托福|rdgscratch|This frog is getting thicker! Does it have growing eggs inside?
+2875391|托福|BE|The petrol pump attendant wasn't very thrilled when we only bought a newspaper from him.
+22461|托福|BE|When the accountant was arrested, rumour had it that it was for his creative bookkeeping.
+238479|托福|BE|The words above the door of the theatre were a metre high.
+388298|托福|RB|She's worried because she hasn't received a letter from her son for many months.
+611228|托福|RB|She's made up her mind and refuses to be talked out of it.
+388297|托福|RB|She's worried since she hasn't heard from her son for many months.
+562082|托福|RB|She's been living for the last five years under an assumed name.
+462396|托福|cblanken|She threw her hands up in horror when she saw what he had done.
+596298|托福|cblanken|He ran off with his best friend's wife and hasn't been heard from since.
+681915|托福|cblanken|The president resigned from office after an investigation showed he had lied to voters.
+17239|托福|cblanken|If what you say is true, it follows that he has an alibi.
+895455|托福|cblanken|You can't blame her for not knowing what she hasn't been taught.
+462622|托福|cblanken|The bull is stronger than the bullfighter, but he almost always loses.
+821416|托福|cblanken|Did she ever confide in you about the problems she was having?
+552249|托福|cblanken|Roger Miller began writing songs because he loved the music he heard on the radio.
+5992|托福|cblanken|I heard a cotton candy shop has just opened. Let's go, dudes.
+28186|托福|cblanken|No sooner had I sat down and relaxed than the phone rang.
+272724|托福|cblanken|On last week's English test, my score was worse than hers.
+13319769|托福|rul|Globasa's design, reminiscent of the world's creole languages, is the result of the following guiding principles: optimal simplicity, balance, and internationality.
+13320547|托福|rul|Globasa has no verb conjugation, meaning that verbs don't change according to the subject (or doer) of the sentence.
+10471521|托福|rul|Academics say a lack of outdoor play is robbing children of vital social skills they’ll need as adults.
+10535601|托福|rul|The chessboard is the world; the pieces are the phenomena of the universe; the rules are what we call the laws of nature.
+3152987|托福|rul|Are increases in life expectancy accompanied by a concurrent postponement of disability and functional limitations?
+7781942|托福|rul|The landfills next to large cities are changing the migratory habits of some animal species.
+10020593|托福|rul|Moses was the greatest of the prophets, but he was not a perfect person.
+623263|托福|rul|A white car has been tailing me for the last two miles.
+9771010|托福|rul|Watching gameplay videos online made me want to play it for myself.
+28032|托福|rul|Had he taken his doctor's advice, he might not have died.
+8559363|托福|rul|Conspiracy theories were made up by the CIA to divert people's attention away from capitalism.
+10284722|托福|rul|When you were studying abroad in Japan, did you make a lot of friends?
+13320545|托福|rul|Globasa has neither definite nor indefinite articles (the words a and the in English).
+10243778|托福|rul|Tom is a woodland elf and John is a dwarf from the mountains.
+3139947|托福|rul|For fuck's sake, where did I put my goddamn house keys?
+10599268|托福|Auride|Tom is such a picky eater that he'll diligently pick the stringy pith from an orange before eating it.
+10660602|托福|Auride|Every single citrus tree entering the country is inspected for signs of canker lesions on its leaves and stems.
+11034635|托福|Auride|What we know of the game's lore is assembled from numerous fragmentary snippets of text found in item descriptions, dialog, and cutscenes.
+10604659|托福|Auride|The bridge is supported by a truss made up of steel beams, making it both strong and lightweight.
+282499|托福|Auride|A buyers' market is a market in which goods are plentiful, buyers have a wide range of choices, and prices are low.
+10604723|托福|Auride|At higher production rates, it becomes necessary to use an automatic palletizer to sort boxes of finished goods onto pallets for shipping.
+10763470|托福|Auride|Stingrays and sharks, being related, share some traits, like electroreception and teeth that are constantly shed and regrown.
+10826073|托福|Auride|Many types of vascular diseases are identified by their affects on blood flow in the hands and legs.
+275795|托福|Auride|What is important is not which university you've graduated from but what you've learned in the university.
+269552|托福|Auride|After she filled out the application, the records clerk told her that the fee was eight dollars.
+11125393|托福|Auride|The investigation revealed that the root cause of the crash was an errant wire bridging electrical contacts.
+72814|托福|Auride|The two men understood one another perfectly, and had a mutual respect for each other's strong qualities.
+1334078|托福|Auride|She has a boyfriend she's been going out with since high school, but she feels their relationship has stagnated, so she's become dissatisfied.
+10649621|托福|Auride|Many theaters still have marquee signs over their entrances, advertising the current films being shown to passersby.
+10693689|托福|Auride|An astringent, like an alum block or styptic pencil, helps close and heal small cuts after shaving.
+10627828|托福|Auride|The second shot of the scene features the protagonist and antagonist transposed, alluding to their similarities.
+263496|托福|Auride|Some of the college students who are caught cheating on the exams do not even blush.
+10826052|托福|Auride|If you're practicing target archery, you'll be using a narrow, pointed arrowhead rather than a broadhead.
+20523|托福|Auride|She knew what it was like for married women to look after houses, husbands and children.
+27150|托福|Auride|The lock on my drawer had been tampered with and some of my papers were missing.
+39235|托福|Auride|What is shown on television is, as it were, a reflection of what society is like.
+44271|托福|Auride|The ladies are looking after the children whose parents are employed in factories during the daytime.
+62916|托福|Auride|Smaller classes mean a higher standard of education, and that's what we want for our kids.
+64465|托福|Auride|How are you and your wife doing, now that the birds have all flown the coop?
+239281|托福|Auride|He seems like a softy on the surface, but at the core he's got an iron will that makes him an extremely tough negotiator.
+246313|托福|Auride|Why don't we stop arguing over these piddling matters and get to the issues at hand?
+265781|托福|Auride|The young man got up hurriedly, stammered a few words and in a moment was gone.
+267040|托福|Auride|Crashes in the early days of commercial jets tended to be caused by technical faults, such as metal fatigue in the airframe or engines.
+279573|托福|Auride|He became bad-tempered, continually criticized his wife's cooking and complained of a pain in his stomach.
+294628|托福|Auride|He had not been employed by the company two years before his linguistic abilities were recognized.
+327107|托福|Auride|Soba is made of buckwheat flour, and udon and kishimen are made of plain wheat flour.
+10627930|托福|Auride|The aisle was packed with an enormous variety of brassieres, in all shapes, sizes, and designs.
+10826086|托福|Auride|Four-bar linkages are used in a huge variety of applications, from car suspensions to folding chairs.
+10660842|托福|Auride|The sounds babies make when they babble seem to contain a lot of anterior consonants.
+10604705|托福|Auride|The video portion of the review mostly consisted of a montage of miscellaneous in-game footage.
+11059478|托福|Auride|The company basically treated its workers like serfs - controlling nearly every aspect of their lives.
+260491|托福|Auride|I was trying to tell him what had really happened, but he cut me short.
+268156|托福|Auride|The area was cordoned off while fire fighters tried to keep the blaze under control.
+11125373|托福|Auride|I look forward to the resumption of normal traffic patterns once the bridge is repaired.
+49568|托福|Auride|The movie star ate crow many times because of all the thoughtless things she said.
+49131|托福|Auride|He had not been employed by the company three years before he become a director.
+268553|托福|Auride|Though it was a muggy night, she went to bed with all the windows closed.
+242627|托福|Auride|Japan is today considered to be one of the greatest economic powers of the world.
+11059498|托福|Auride|As a result of burnout, my submissions to the magazine became increasingly labored and vacuous.
+10921482|托福|Auride|Modern authentication techniques have come a long way since the days of simple spoken watchwords.
+40303|托福|Auride|We were running out of gas, and what was worse, it began to snow heavily.
+285757|托福|Auride|His company went bankrupt, and to make matters worse, he met with a traffic accident.
+10888598|托福|Auride|A pallbearer stumbled, causing the casket to tumble off the bier and onto the ground.
+268514|托福|Auride|Information is sometimes held back from patients when it is thought it might upset them.
+18684|托福|Auride|The sudden increase of cars is causing a large number of traffic accidents every day.
+19204|托福|Auride|The burglar was traced by one of the things he had left on the scene.
+19581|托福|Auride|The rescue workers are going to hand out supplies to the victims of the earthquake.
+28164|托福|Auride|Getting a sports car is easy, compared to the maintenance one must do on it.
+30000|托福|Auride|A good theory is characterized by the fact that it makes a number of predictions that could in principle be disproved or falsified by observation.
+31282|托福|Auride|We would have bought the plane tickets if the price had been a little lower.
+32879|托福|Auride|A home is a once-in-a-lifetime purchase so you don't want to make any snap decisions.
+40476|托福|Auride|They had been dancing for an hour when there was a knock on the door.
+43436|托福|Auride|All the coaches of the train were packed to capacity ten minutes before it started.
+46786|托福|Auride|The main reason is that the subjects were totally unaware of the possibility of shortcuts.
+47788|托福|Auride|The author is seventy, but he's no less productive than he was twenty years ago.
+49569|托福|Auride|Their influence becomes greater every day, but they are uncreative and can't make value judgements.
+61695|托福|Auride|This factory uses an integrated manufacturing system standardized from parts on through to finished products.
+71470|托福|Auride|When you get married and have kids, you'll realize that actions speak louder than words.
+240877|托福|Auride|If it had not been for antibiotics, medicine would not have made such remarkable progress.
+242453|托福|Auride|More and more women have their own careers and are economically independent of their husbands.
+243068|托福|Auride|It was not until this year that these documents were made available to the public.
+243990|托福|Auride|The first thing he did was to untie his shoelaces and take his shoes off.
+244708|托福|Auride|The nation's trade balance improved last year as exports were strong, while imports remained steady.
+258608|托福|Auride|I certainly don't subscribe to the view that women are necessarily more moral than men.
+263793|托福|Auride|We expected that things would get better, but, as it is, they are getting worse.
+267986|托福|Auride|The boy grew taller and taller, till at last he exceeded his father in height.
+268228|托福|Auride|When he was faced with the evidence, he had to admit that he was guilty.
+269737|托福|Auride|Many parents are worried their children are not being given a basic understanding of numbers.
+269940|托福|Auride|A man's worth does not lie in what he has, but in what he is.
+274809|托福|Auride|With many students chatting, it was difficult to hear what the professor had to say.
+275096|托福|Auride|Although most islands in the ocean have been mapped, the ocean floor is generally unknown.
+275561|托福|Auride|The heavy rainfall has caused vegetable prices to rise daily for the last two months.
+282139|托福|Auride|The rainforests are disappearing at the rate of tens of thousands of hectares a day.
+298356|托福|Auride|He hadn't been in the office five minutes before he told us what to do.
+302930|托福|Auride|He knows that his critics are waiting to pounce on any slip that he makes.
+305370|托福|Auride|They are better educated, healthier and wealthier than their parents' generation was at their age.
+306471|托福|Auride|They take it for granted that what is new is better than what is old.
+309899|托福|Auride|She says she has no intention of having a baby until she's in her thirties.`;
 
 /* ================= 基础 ================= */
 /* 两套间隔阶梯（天）。认识的词走正常档；闪过模糊/不认识的词走更密的档，复现更频繁。 */
@@ -11193,6 +11767,7 @@ function load(){
   }catch(e){ return def; }
 }
 let S = load();
+S.notify = Object.assign({ asked:false, on:false, last:'', push:false }, S.notify || {});
 DECKS.custom = S.custom;   // load() 无存档时会直接返回默认对象,跳过上面的赋值,这里必须补同步
 DECKS.wrong = S.wrong;
 DECKS.known = S.known;
@@ -12699,6 +13274,13 @@ function modalSettings(){
       <div><label>高频错词</label><div class="sub">已收录 ${S.wrong.length} 个,可查看和手动删除</div></div>
       <button class="danger" data-act="wrong">查看</button>
     </div>
+    <div class="field">
+      <div><label>每日提醒</label><div class="sub">${remindStatusText()}</div></div>
+      <div class="rm-row">
+        <button class="chip${remindState().on ? ' on' : ''}" data-act="notifyToggle">${remindState().on ? '关闭' : '开启'}</button>
+        <button class="chip" data-act="notifyTest">试一下</button>
+      </div>
+    </div>
     <div class="field" style="border-bottom:0">
       <div><label>清空当前词书进度</label><div class="sub">只影响「${esc(META[S.deck].name)}」</div></div>
       <button class="danger" data-act="resetDeck">清空</button>
@@ -12948,6 +13530,231 @@ async function doAuth(kind){
 }
 
 /* ================= 事件 ================= */
+/* ================= 每日提醒 =================
+   纯静态页，没有后端也没有 Service Worker，所以能做到的是：
+   - 页面开着（前台或后台标签）时，定时器在 9:00 整弹系统通知；
+   - 关掉页面就收不到，下次打开时补一次（9 点前不打扰，9 点后当天只提醒一次）；
+   - 浏览器不支持 / 用户拒绝时，退回页面内弹窗，同样一天一次。
+   想做到「关着也能推」，得加 Manifest + Service Worker + 推送服务端，不是单文件能承担的。 */
+const REMIND_TEXTS = [
+  '早上好呀 ☀️ 单词们已经列队完毕，就等队长来点名了 (๑•̀ㅂ•́)و✧',
+  '9 点整！今天的词表蹲在门口等你，说再不来它们就要自己背自己了 (￣▽￣)',
+  '起床打卡啦 ☕ 你昨天背的词说，一天不见，它已经忘了你长啥样 (・∀・)',
+  '叮咚 🔔 你的 20 个新词已到货，超时不取会自动变成「我认识」的错觉哦',
+  '今日份英语已就位～ 它们刚才在偷偷互相翻译，场面有点混乱 (＾ω＾)',
+  '友好提示：拖延一天，明天就得多背一天 (｡•́︿•̀｡) 现在来还来得及！',
+  '早上九点，吉时 ⏰ 五分钟背十个词，剩下的时间拿去开心 ✧(≖ ◡ ≖✿)',
+  '你的连续打卡正在发烧 🤒 再不来它就要断气了，快来抢救一下！',
+  '温馨提示：你的单词已经饥肠辘辘 🍞 它们想吃掉你的注意力 (๑´ㅂ`๑)',
+  '今天的你 + 今天的词 = 明天更酷的你 🚀 走，去背两个 (ง •̀_•́)ง',
+  '九个字：再不来，词就跑了 (｀・ω・´)',
+  '听说认真背单词的人运气都不会太差 🍀 要不要试一试？',
+];
+/* 后台推送：Service Worker + VAPID。
+   页面关着也能收到，靠的是 Supabase 上的 push_subs 表 + 每 5 分钟一次的 Edge Function。
+   表还没建/函数还没部署时，下面这些会安静地失败，退回原来的页面内提醒。 */
+const VAPID_PUBLIC = 'BP0q-hX04IqPnUyEMtgNnQIWni7tH44bJg7r4s-NCuPufUtzaD9pACjSfd5n8VnEsxXUW6ezMCuvf-fkYI1V2Ts';
+let swReg = null, swReady = null;
+
+function b64ToU8(base64){
+  const pad = '='.repeat((4 - base64.length % 4) % 4);
+  const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function initSW(){
+  if(!('serviceWorker' in navigator)) return Promise.resolve(null);
+  if(swReady) return swReady;
+  swReady = navigator.serviceWorker.register('./sw.js', { scope: './' }).then(function(reg){
+    swReg = reg;
+    return reg;
+  }).catch(function(){ return null; });
+  return swReady;
+}
+async function ensurePush(){
+  const reg = await initSW();
+  if(!reg || !reg.pushManager) return null;
+  try{
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+    }
+    return sub;
+  }catch(e){ return null; }
+}
+async function savePushSub(sub){
+  const j = sub.toJSON();
+  const row = {
+    endpoint: sub.endpoint,
+    p256dh: j.keys.p256dh,
+    auth: j.keys.auth,
+    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'),
+    hour: 9,
+    ua: (navigator.userAgent || '').slice(0, 120)
+  };
+  const r = await fetch(CLOUD.url + '/rest/v1/push_subs?on_conflict=endpoint', {
+    method: 'POST',
+    headers: Object.assign(authHeaders(AUTH && AUTH.access_token), { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }),
+    body: JSON.stringify(row)
+  });
+  if(!r.ok) throw new Error('save_push_' + r.status);
+}
+async function dropPushSub(){
+  const reg = await initSW();
+  if(!reg || !reg.pushManager) return;
+  let sub = null;
+  try{ sub = await reg.pushManager.getSubscription(); }catch(e){ sub = null; }
+  if(!sub) return;
+  const ep = sub.endpoint;
+  try{ await sub.unsubscribe(); }catch(e){}
+  try{
+    await fetch(CLOUD.url + '/rest/v1/push_subs?endpoint=eq.' + encodeURIComponent(ep), {
+      method: 'DELETE',
+      headers: authHeaders(AUTH && AUTH.access_token)
+    });
+  }catch(e){}
+}
+
+let remindTimer = 0, remindTick = 0;
+
+function remindState(){
+  if(!S.notify || typeof S.notify !== 'object') S.notify = { asked:false, on:false, last:'' };
+  return S.notify;
+}
+function remindSupported(){
+  return typeof Notification !== 'undefined' && typeof Notification.requestPermission === 'function';
+}
+function remindPick(){
+  const d = new Date();
+  const day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  return REMIND_TEXTS[day % REMIND_TEXTS.length];
+}
+function remindStatusText(){
+  const st = remindState();
+  if(!remindSupported()) return '这个浏览器不支持系统通知，用页面内弹窗提醒';
+  if(!st.on) return '未开启';
+  if(Notification.permission === 'granted') return st.push ? '已开启 · 每天 9:00 · 关掉页面也会推送' : '已开启 · 每天 9:00 · 仅页面开着时';
+  return '通知权限被拒绝，已退回页面内提醒';
+}
+function askReminder(){
+  openModal(`<div class="remind-pop">
+    <div class="remind-emoji">☀️</div>
+    <h3>要不要每天 9 点被我喊一句？</h3>
+    <p class="sub">开个通知，我每天早上 9 点提醒你背单词。<br>不开也行，我不会生气——只会有一点点 (・∀・)</p>
+    <div class="sheet-actions">
+      <button class="btn ghost" data-act="notifyLater">不用啦</button>
+      <button class="btn primary" data-act="notifyAllow">好呀，喊我</button>
+    </div></div>`);
+}
+async function enableReminder(){
+  const st = remindState();
+  st.asked = true;
+  if(!remindSupported()){ st.on = false; save(); closeModal(); toast('这个浏览器不支持系统通知'); return; }
+  let perm = Notification.permission;
+  if(perm === 'default'){
+    try{ perm = await Notification.requestPermission(); }catch(e){ perm = 'denied'; }
+  }
+  st.on = (perm === 'granted');
+  st.push = false;
+  save();
+  closeModal();
+  if(st.on){
+    scheduleReminder();
+    const sub = await ensurePush();
+    if(sub){
+      try{ await savePushSub(sub); st.push = true; }catch(e){ st.push = false; }
+      save();
+    }
+    toast(st.push ? '好，每天 9 点见；关掉页面也会喊你 ☀️' : '好，每天 9 点见（只有页面开着时才会响）');
+  }else{
+    toast('通知没开成，我会在页面里提醒你 (´･ω･`)');
+  }
+}
+function disableReminder(){
+  const st = remindState();
+  st.on = false;
+  st.push = false;
+  dropPushSub();
+  save();
+  clearTimeout(remindTimer);
+  clearInterval(remindTick);
+  closeModal();
+  toast('已关闭每日提醒，想开随时回来');
+}
+function scheduleReminder(){
+  clearTimeout(remindTimer);
+  clearInterval(remindTick);
+  const st = remindState();
+  if(!st.on) return;
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
+  if(next <= now) next.setDate(next.getDate() + 1);
+  remindTimer = setTimeout(function(){ checkReminder(); }, Math.min(next - now, 2147483000));
+  // 兜底：系统休眠 / 标签页节流会让上面的长定时器漂移，每分钟对一次表
+  remindTick = setInterval(checkReminder, 60000);
+}
+function fireReminder(test){
+  const msg = remindPick();
+  const opts = { body: msg, icon: './icons/icon-192.png', tag: 'dsword-daily-9' };
+  let sent = false;
+  if(remindSupported() && Notification.permission === 'granted'){
+    try{
+      if(navigator.serviceWorker && navigator.serviceWorker.controller){
+        navigator.serviceWorker.controller.postMessage({ type:'notify', title:'背单词 · 9 点打卡 ☀️', options: opts });
+        sent = true;
+      }else{
+        const n = new Notification('背单词 · 9 点打卡 ☀️', opts);
+        n.onclick = function(){ try{ n.close(); window.focus(); }catch(e){} };
+        sent = true;
+      }
+    }catch(e){ sent = false; }
+  }
+  if(sent){ if(test) toast('通知发出去啦，看到了吗？'); return true; }
+  popReminder(msg);
+  return false;
+}
+function popReminder(msg){
+  openModal(`<div class="remind-pop">
+    <div class="remind-emoji">☀️</div>
+    <h3>该背单词啦 (๑•̀ㅂ•́)و✧</h3>
+    <p class="remind-msg">${esc(msg)}</p>
+    <div class="sheet-actions">
+      <button class="btn ghost" data-act="close">再等等</button>
+      <button class="btn primary" data-act="start">去打卡</button>
+    </div></div>`);
+}
+function checkReminder(){
+  const st = remindState();
+  if(!st.on) return;
+  const now = new Date();
+  if(now.getHours() < 9) return;           // 没到点，不打扰
+  const k = dkey(now);
+  if(st.last === k) return;                 // 今天已经提醒过
+  st.last = k;
+  save();
+  fireReminder(false);
+  scheduleReminder();
+}
+function bootReminder(){
+  const st = remindState();
+  initSW();
+  scheduleReminder();
+  if(!st.asked){
+    // 首次使用：等首页落定再问，避免和首屏渲染抢注意力
+    setTimeout(function(){
+      const s2 = remindState();
+      if(s2.asked || CUR !== 'home' || !$('#modal').hidden) return;
+      askReminder();
+    }, 1800);
+  }else if(st.on){
+    setTimeout(checkReminder, 1500);        // 打开就补一次当天漏掉的
+  }
+}
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) checkReminder();
+});
+
 document.addEventListener('click', function(e){
   const el = e.target.closest('[data-act]');
   if(!el) return;
@@ -13045,6 +13852,17 @@ document.addEventListener('click', function(e){
       refreshLrnList();
       break;
     case 'home': show('home'); break;
+    case 'notifyAllow': enableReminder(); break;
+    case 'notifyLater':
+      remindState().asked = true;
+      save();
+      closeModal();
+      toast('行吧，那我就在页面里提醒你 (・∀・)');
+      break;
+    case 'notifyToggle':
+      if(remindState().on) disableReminder(); else enableReminder();
+      break;
+    case 'notifyTest': fireReminder(true); break;
     case 'read': show('read'); break;
     case 'readLv': {
       stopReadAudio();
@@ -13303,6 +14121,7 @@ $('#deckSel').addEventListener('change', function(){
 renderDeckSelect();
 refreshAcctBtn();
 show('home');
+bootReminder();
 /* 有登录态就在后台拉一次云端进度，失败不打扰 */
 if(cloudOn() && AUTH){
   setTimeout(function(){ cloudPull().then(function(){ render(); }).catch(function(){}); }, 800);
