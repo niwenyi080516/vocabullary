@@ -102,6 +102,46 @@ h1,h2,h3,p{margin:0}
 .home-foot{text-align:center;margin-top:22px;padding-bottom:24px}
 .home-foot .link{font-size:13px;color:var(--sub)}
 .more-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 16px}
+
+/* ===== 沉浸式首页 ===== */
+body.immersive .topbar{display:none}
+body.immersive{
+  background:
+    radial-gradient(120% 70% at 15% 8%, #8fbfb4 0%, rgba(143,191,180,0) 60%),
+    radial-gradient(110% 60% at 85% 18%, #a8c6d2 0%, rgba(168,198,210,0) 55%),
+    radial-gradient(120% 80% at 25% 62%, #357a58 0%, rgba(53,122,88,0) 62%),
+    radial-gradient(130% 90% at 75% 92%, #17472f 0%, rgba(23,71,47,0) 65%),
+    linear-gradient(180deg, #a6c9c2 0%, #5d9679 42%, #1d4f37 100%);
+  background-attachment: fixed;
+}
+body.immersive::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay; opacity:.45;
+}
+.ih{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top)) 22px 100px;color:#fff}
+.ih-top{display:flex;justify-content:space-between;align-items:center}
+.ih-avatar{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.92);color:#1d4f37;display:grid;place-items:center;font-size:18px;border:0;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.ih-title{font-family:Georgia,'Times New Roman',serif;font-size:clamp(36px,10.5vw,52px);font-weight:600;text-align:center;margin:auto 0 8px;letter-spacing:.5px;text-shadow:0 2px 26px rgba(0,0,0,.28);cursor:pointer;color:#fff;background:none;border:0;width:100%}
+.ih-sub{text-align:center;font-size:13px;color:rgba(255,255,255,.78);margin-bottom:auto}
+.ih-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px}
+.ih-card{background:rgba(255,255,255,.17);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:18px 16px;text-align:left;color:#fff;transition:transform .12s}
+.ih-card:active{transform:scale(.97)}
+.ih-card b{display:block;font-size:17px;font-weight:650;margin-bottom:12px}
+.ih-card span{font-size:34px;font-family:Georgia,serif;color:#f2f6c4;line-height:1}
+.ih-card em{font-style:normal;font-size:28px;color:#bff5c8;line-height:1}
+.ih-nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:space-around;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.3) 65%)}
+.ih-nav button{background:none;border:0;color:rgba(255,255,255,.72);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 16px;border-radius:12px}
+.ih-nav button i{font-style:normal;font-size:20px;line-height:1}
+.ih-nav button.on{color:#fff}
+.ih-full{position:relative;z-index:1;padding:0 0 90px}
+.ih-full .wrap{padding-top:14px}
+.deck-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.deck-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);text-align:left}
+.deck-item.on{border-color:var(--accent);background:var(--soft)}
+.deck-item em{font-style:normal;font-size:20px}
+.deck-item b{flex:1;font-size:14.5px}
+.deck-item span{font-size:12px;color:var(--sub)}
 .act{
   position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 10px;
   display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);
@@ -11284,6 +11324,9 @@ function show(v){
   render();
 }
 function render(){
+  if(document.body && document.body.classList){
+    document.body.classList.toggle('immersive', CUR === 'home' || CUR === 'more');
+  }
   if(CUR === 'home') renderHome();
   else if(CUR === 'more') renderMore();
   else if(CUR === 'study') renderCard();
@@ -11364,10 +11407,55 @@ function renderHome(){
     </div>`;
   }
 
-  $('#main').innerHTML = `<div class="wrap">
-    ${hero}
-    <p class="home-foot"><button class="link" data-act="more">更多功能 · 测验 / 统计 / 词库 ›</button></p>
-  </div>`;
+  if(!list.length){
+    $('#main').innerHTML = `<div class="ih">
+      <div class="ih-top"><button class="ih-avatar" data-act="account">👤</button></div>
+      <button class="ih-title" data-act="decks">${esc((META[S.deck] && (META[S.deck].en || META[S.deck].name)) || '')}</button>
+      <div class="ih-sub">这个词书是空的</div>
+      <div class="ih-cards">
+        <button class="ih-card" data-act="import"><b>Import</b><em>＋</em></button>
+        <button class="ih-card" data-act="decks"><b>词书</b><em>↻</em></button>
+      </div>
+    </div>` + navBar('home');
+    return;
+  }
+
+  const m = META[S.deck] || { name:'', en:'' };
+  $('#main').innerHTML = `<div class="ih">
+    <div class="ih-top">
+      <button class="ih-avatar" data-act="account" aria-label="账号">👤</button>
+    </div>
+    <button class="ih-title" data-act="decks" title="切换词书">${esc(m.en || m.name)}</button>
+    <div class="ih-sub">${d.getMonth()+1}月${d.getDate()}日 · 今日已学 ${doneToday} · 已学 ${learned}</div>
+    <div class="ih-cards">
+      <button class="ih-card" data-act="startNew">
+        <b>Learn</b>${newTake > 0 ? `<span>${newTake}</span>` : '<em>✓</em>'}
+      </button>
+      <button class="ih-card" data-act="startReview">
+        <b>Review</b>${due > 0 ? `<span>${due}</span>` : '<em>✓</em>'}
+      </button>
+    </div>
+  </div>` + navBar('home');
+}
+
+function navBar(active){
+  return '<nav class="ih-nav">' +
+    '<button data-act="home"' + (active === 'home' ? ' class="on"' : '') + '><i>🎓</i>学习</button>' +
+    '<button data-act="more"' + (active === 'more' ? ' class="on"' : '') + '><i>🗂</i>功能</button>' +
+    '<button data-act="settings"><i>⚙</i>设置</button>' +
+  '</nav>';
+}
+
+function modalDecks(){
+  const ids = DECK_IDS.concat(['custom', 'wrong']);
+  const rows = ids.map(function(id){
+    if(!META[id]) return '';
+    const n = (DECKS[id] || []).length;
+    return '<button class="deck-item' + (id === S.deck ? ' on' : '') + '" data-act="pickDeck" data-d="' + id + '">' +
+      '<em>' + META[id].icon + '</em><b>' + esc(META[id].name) + '</b><span>' + n + ' 个</span></button>';
+  }).join('');
+  openModal('<h3>选词书</h3><div class="deck-list">' + rows + '</div>' +
+    '<div class="sheet-actions"><button class="btn ghost" data-act="close">关闭</button></div>');
 }
 
 /* ================= 第二屏：功能 ================= */
@@ -11395,7 +11483,7 @@ function renderMore(){
     return `<div class="d"><span class="n">${n || ''}</span><div class="b ${n ? '' : 'zero'}" style="height:${h}px"></div><span class="l">${label}</span></div>`;
   }).join('');
 
-  $('#main').innerHTML = `<div class="wrap">
+  $('#main').innerHTML = `<div class="ih-full"><div class="wrap">
     <div class="more-head">
       <button class="link" data-act="home">‹ 背单词</button>
       <span class="tiny">${esc(META[S.deck].name)}</span>
@@ -11419,8 +11507,7 @@ function renderMore(){
       <div class="fc">${fcHtml}</div>
       <p class="fc-note">复习节点:第 1、2、4、7、15、30、60、120 天 · 点「认识」往后推一档</p>
     </div>` : ''}
-    <p class="home-foot">向左划返回背单词</p>
-  </div>`;
+  </div></div>` + navBar('more');
 }
 
 function forecastCounts(){
@@ -11460,12 +11547,22 @@ function startSession(mode){
     const freshAll = list.filter(w => !rec(w.w));
     const allow = Math.max(0, S.settings.dailyNew - deckToday(S.deck).new);
     const pick = shuffle(freshAll.slice()).slice(0, allow);
-    queue = shuffle(due.slice()).map(w => ({ w:w, isNew:false })).concat(pick.map(w => ({ w:w, isNew:true })));
-    shuffle(queue);
+    if(mode === 'review'){
+      queue = shuffle(due.slice()).map(w => ({ w:w, isNew:false }));
+    }else if(mode === 'new'){
+      queue = pick.map(w => ({ w:w, isNew:true }));
+    }else{
+      queue = shuffle(due.slice()).map(w => ({ w:w, isNew:false })).concat(pick.map(w => ({ w:w, isNew:true })));
+      shuffle(queue);
+    }
   }
 
   if(!queue.length){
-    toast(mode === 'random' ? '暂时没有可复习的词' : (mode === 'all' ? '这里还没有词' : '今天没有要背的词了'));
+    toast(mode === 'random' ? '暂时没有可复习的词'
+      : mode === 'review' ? '今天没有到期的复习'
+      : mode === 'new' ? '今天的新词已经背完了'
+      : mode === 'all' ? '这里还没有词'
+      : '今天没有要背的词了');
     return;
   }
   sess = { queue:queue, i:0, repeats:{}, appear:{}, right:0,
@@ -12850,6 +12947,14 @@ document.addEventListener('click', function(e){
     case 'today': show('today'); break;
     case 'learned': show('learned'); break;
     case 'more': show('more'); break;
+    case 'startNew': startSession('new'); break;
+    case 'startReview': startSession('review'); break;
+    case 'decks': modalDecks(); break;
+    case 'pickDeck': {
+      const d = el.dataset.d;
+      if(d && META[d]){ S.deck = d; save(); renderDeckSelect(); closeModal(); show('home'); }
+      break;
+    }
     case 'known': show('known'); break;
     case 'markKnown': {
       if(!sess || sess.i >= sess.queue.length) return;
