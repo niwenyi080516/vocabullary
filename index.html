@@ -101,7 +101,17 @@ h1,h2,h3,p{margin:0}
 .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .home-foot{text-align:center;margin-top:22px;padding-bottom:24px}
 .home-foot .link{font-size:13px;color:var(--sub)}
-.more-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 16px}
+.more-head{display:flex;align-items:center;justify-content:space-between;padding:14px 4px 6px}
+.more-head .link{color:#fff;opacity:.92;font-size:14px}
+.more-deck{
+  font-size:12.5px;color:#fff;background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.22);padding:5px 12px;border-radius:99px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.sec-title{font-size:12px;color:rgba(255,255,255,.72);margin:20px 4px 8px;letter-spacing:.6px}
+.act.wide{grid-column:1 / -1;flex-direction:row;gap:8px;justify-content:center;padding:16px 10px}
+.act.wide em{font-size:18px}
+.fc-empty{text-align:center;color:var(--sub);font-size:13px;padding:26px 0 18px}
 
 /* ===== 沉浸式首页 ===== */
 body.immersive .topbar{display:none}
@@ -11482,29 +11492,39 @@ function renderMore(){
     const h = Math.max(4, Math.round(n / fcMax * 52));
     return `<div class="d"><span class="n">${n || ''}</span><div class="b ${n ? '' : 'zero'}" style="height:${h}px"></div><span class="l">${label}</span></div>`;
   }).join('');
+  const fcTotal = fc.reduce(function(a, b){ return a + b; }, 0);
 
   $('#main').innerHTML = `<div class="ih-full"><div class="wrap">
     <div class="more-head">
       <button class="link" data-act="home">‹ 背单词</button>
-      <span class="tiny">${esc(META[S.deck].name)}</span>
+      <span class="more-deck">${esc(META[S.deck].name)}</span>
     </div>
     <div class="tiles">
       <div class="tile" data-act="learned" title="查看所有学过的词"><span>已学 ›</span><b>${learned}</b></div>
       <div class="tile" data-act="today" title="看看今天背了哪些词"><span>今日已学 ›</span><b>${doneToday}</b></div>
       <div class="tile"><span>连续打卡</span><b>${S.streak.count}</b><i>天</i></div>
     </div>
+
+    <div class="sec-title">训练</div>
     <div class="actions">
       <button class="act" data-act="quiz"><em>🧠</em>测验</button>
       <button class="act" data-act="read"><em>🎧</em>听读</button>
       <button class="act" data-act="today"><em>📅</em>今日单词</button>
+    </div>
+
+    <div class="sec-title">词库</div>
+    <div class="actions">
       <button class="act" data-act="stats"><em>📊</em>统计</button>
       <button class="act" data-act="wrong"><em>⚠️</em>错词库${S.wrong.length ? `<i>${S.wrong.length}</i>` : ''}</button>
       <button class="act" data-act="known"><em>✅</em>已掌握${S.known.length ? `<i>${S.known.length}</i>` : ''}</button>
-      <button class="act" data-act="import"><em>📥</em>导入词表</button>
     </div>
-    ${list.length ? `<div class="panel">
+    <div class="actions">
+      <button class="act wide" data-act="import"><em>📥</em>导入词表</button>
+    </div>
+
+    ${list.length ? `<div class="sec-title">排期</div><div class="panel">
       <div class="panel-h"><b>未来 7 天复习</b><span>艾宾浩斯遗忘曲线</span></div>
-      <div class="fc">${fcHtml}</div>
+      ${fcTotal ? `<div class="fc">${fcHtml}</div>` : '<p class="fc-empty">接下来 7 天没有到期的复习</p>'}
       <p class="fc-note">复习节点:第 1、2、4、7、15、30、60、120 天 · 点「认识」往后推一档</p>
     </div>` : ''}
   </div></div>` + navBar('more');
