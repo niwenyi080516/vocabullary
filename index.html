@@ -99,6 +99,9 @@ h1,h2,h3,p{margin:0}
 .tile b{font-size:21px;font-variant-numeric:tabular-nums}
 .tile i{font-style:normal;font-size:11px;color:var(--sub);margin-left:2px}
 .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.home-foot{text-align:center;margin-top:22px;padding-bottom:24px}
+.home-foot .link{font-size:13px;color:var(--sub)}
+.more-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 16px}
 .act{
   position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 10px;
   display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);
@@ -11282,6 +11285,7 @@ function show(v){
 }
 function render(){
   if(CUR === 'home') renderHome();
+  else if(CUR === 'more') renderMore();
   else if(CUR === 'study') renderCard();
   else if(CUR === 'quiz') renderQuiz();
   else if(CUR === 'stats') renderStats();
@@ -11360,6 +11364,27 @@ function renderHome(){
     </div>`;
   }
 
+  $('#main').innerHTML = `<div class="wrap">
+    ${hero}
+    <p class="home-foot"><button class="link" data-act="more">更多功能 · 测验 / 统计 / 词库 ›</button></p>
+  </div>`;
+}
+
+/* ================= 第二屏：功能 ================= */
+function renderMore(){
+  const list = words();
+  const now = Date.now(), tl = todayLog();
+  let learned = 0, mastered = 0;
+  for(let i = 0; i < list.length; i++){
+    const w = list[i], r = S.progress[kkey(w.w)];
+    if(knownHas(w.w)){ learned++; mastered++; continue; }
+    if(!r) continue;
+    learned++;
+    if(r.s >= MASTER) mastered++;
+  }
+  const dt = deckToday(S.deck);
+  const doneToday = dt.new + dt.review;
+
   const fc = forecastCounts();
   const fcMax = Math.max(1, Math.max.apply(null, fc));
   const WK = '日一二三四五六';
@@ -11371,7 +11396,10 @@ function renderHome(){
   }).join('');
 
   $('#main').innerHTML = `<div class="wrap">
-    ${hero}
+    <div class="more-head">
+      <button class="link" data-act="home">‹ 背单词</button>
+      <span class="tiny">${esc(META[S.deck].name)}</span>
+    </div>
     <div class="tiles">
       <div class="tile" data-act="learned" title="查看所有学过的词"><span>已学 ›</span><b>${learned}</b></div>
       <div class="tile" data-act="today" title="看看今天背了哪些词"><span>今日已学 ›</span><b>${doneToday}</b></div>
@@ -11391,6 +11419,7 @@ function renderHome(){
       <div class="fc">${fcHtml}</div>
       <p class="fc-note">复习节点:第 1、2、4、7、15、30、60、120 天 · 点「认识」往后推一档</p>
     </div>` : ''}
+    <p class="home-foot">向左划返回背单词</p>
   </div>`;
 }
 
@@ -12820,6 +12849,7 @@ document.addEventListener('click', function(e){
     case 'stats': show('stats'); break;
     case 'today': show('today'); break;
     case 'learned': show('learned'); break;
+    case 'more': show('more'); break;
     case 'known': show('known'); break;
     case 'markKnown': {
       if(!sess || sess.i >= sess.queue.length) return;
@@ -13022,6 +13052,21 @@ document.addEventListener('input', function(e){
     refreshLrnList();
   }
 });
+
+/* 两屏切换：首页右划进功能页，功能页左划回首页 */
+let swX = 0, swY = 0;
+document.addEventListener('touchstart', function(e){
+  if(!e.touches || !e.touches.length) return;
+  swX = e.touches[0].clientX; swY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', function(e){
+  if(!e.changedTouches || !e.changedTouches.length) return;
+  const dx = e.changedTouches[0].clientX - swX;
+  const dy = e.changedTouches[0].clientY - swY;
+  if(Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)) return;
+  if(dx > 0 && CUR === 'home') show('more');
+  else if(dx < 0 && CUR === 'more') show('home');
+}, { passive: true });
 
 document.addEventListener('keydown', function(e){
   if((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')){ undoGrade(); return; }
