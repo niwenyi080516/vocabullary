@@ -334,6 +334,7 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
   <div class="brand"><span class="logo">词</span><span>背单词</span></div>
   <div class="topright">
     <select id="deckSel" class="decksel" aria-label="词书"></select>
+    <button class="iconbtn" id="acctBtn" data-act="account" aria-label="账号">👤</button>
     <button class="iconbtn" data-act="settings" aria-label="设置">⚙</button>
   </div>
 </header>
@@ -11120,7 +11121,10 @@ function load(){
 let S = load();
 DECKS.custom = S.custom;   // load() 无存档时会直接返回默认对象,跳过上面的赋值,这里必须补同步
 DECKS.wrong = S.wrong;
-function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
+function save(){
+  try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){}
+  schedulePush();
+}
 
 const words = () => DECKS[S.deck] || [];
 const kkey = w => S.deck + '::' + w;
@@ -12353,6 +12357,188 @@ function clearCustom(){
   toast('已清空我的词表');
 }
 
+/* ================= 云端账号 =================
+   在下面填入 Supabase 项目的 Project URL 与 anon public key 即可启用。
+   两处留空时整套账号功能隐藏，应用照旧纯本地运行、不联网。 */
+const CLOUD = { url: 'https://rimokrvfcvhxhtsovlcm.supabase.co', key: 'sb_publishable_ovtf102Wl4QI8jgN-BhdTQ_kLO8okG6' };
+const AUTH_KEY = 'dsword.auth';
+let AUTH = null;
+try{ AUTH = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); }catch(e){ AUTH = null; }
+let cloudMuting = false, cloudTimer = 0, cloudState = 'idle';
+
+function cloudOn(){ return !!(CLOUD.url && CLOUD.key); }
+function authHeaders(token){
+  return { 'apikey': CLOUD.key, 'authorization': 'Bearer ' + (token || CLOUD.key), 'content-type': 'application/json' };
+}
+function saveAuth(a){
+  AUTH = a;
+  try{ if(a) localStorage.setItem(AUTH_KEY, JSON.stringify(a)); else localStorage.removeItem(AUTH_KEY); }catch(e){}
+}
+async function cloudSignUp(email, pwd){
+  const r = await fetch(CLOUD.url + '/auth/v1/signup', {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({ email:email, password:pwd }) });
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.msg || j.message || j.error_description || ('注册失败 ' + r.status));
+  return j;
+}
+async function cloudSignIn(email, pwd){
+  const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=password', {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({ email:email, password:pwd }) });
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.error_description || j.msg || j.message || ('登录失败 ' + r.status));
+  return j;
+}
+function adoptSession(j){
+  saveAuth({
+    access_token: j.access_token,
+    refresh_token: j.refresh_token,
+    exp: Date.now() + (j.expires_in || 3600) * 1000,
+    email: (j.user && j.user.email) || '',
+    uid: (j.user && j.user.id) || ''
+  });
+}
+async function cloudToken(){
+  if(!AUTH) throw new Error('未登录');
+  if(AUTH.exp && AUTH.exp - Date.now() > 60000) return AUTH.access_token;
+  if(!AUTH.refresh_token) throw new Error('登录已过期，请重新登录');
+  const r = await fetch(CLOUD.url + '/auth/v1/token?grant_type=refresh_token', {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({ refresh_token: AUTH.refresh_token }) });
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error('登录已过期，请重新登录');
+  AUTH.access_token = j.access_token;
+  AUTH.refresh_token = j.refresh_token || AUTH.refresh_token;
+  AUTH.exp = Date.now() + (j.expires_in || 3600) * 1000;
+  saveAuth(AUTH);
+  return AUTH.access_token;
+}
+/* 合并云端与本地：每个词取 last 更新的那条；错词和自定义词取并集 */
+function mergeCloud(remote){
+  if(!remote || typeof remote !== 'object') return 0;
+  let n = 0;
+  const rp = remote.progress || {};
+  Object.keys(rp).forEach(function(k){
+    const a = S.progress[k], b = rp[k];
+    if(!b) return;
+    if(!a || (b.last || 0) > (a.last || 0)){ S.progress[k] = b; n++; }
+  });
+  const seenW = {};
+  S.wrong.forEach(function(x){ seenW[String(x.w).toLowerCase()] = 1; });
+  (remote.wrong || []).forEach(function(x){
+    const k = String(x.w || '').toLowerCase();
+    if(k && !seenW[k]){ seenW[k] = 1; S.wrong.push(x); n++; }
+  });
+  DECKS.wrong = S.wrong;
+  const seenC = {};
+  S.custom.forEach(function(x){ seenC[String(x.w).toLowerCase()] = 1; });
+  (remote.custom || []).forEach(function(x){
+    const k = String(x.w || '').toLowerCase();
+    if(k && !seenC[k]){ seenC[k] = 1; S.custom.push(x); n++; }
+  });
+  DECKS.custom = S.custom;
+  if(remote.streak && (remote.streak.count || 0) > (S.streak.count || 0)){ S.streak = remote.streak; n++; }
+  return n;
+}
+function schedulePush(){
+  if(!cloudOn() || !AUTH || cloudMuting) return;
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(function(){ cloudPush(); }, 4000);
+}
+async function cloudPush(){
+  if(!cloudOn() || !AUTH) return false;
+  cloudState = 'saving'; refreshAcctBtn();
+  try{
+    const t = await cloudToken();
+    const r = await fetch(CLOUD.url + '/rest/v1/progress', {
+      method:'POST',
+      headers: Object.assign(authHeaders(t), { 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify({ user_id: AUTH.uid, data: S, updated_at: new Date().toISOString() })
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    cloudState = 'ok'; refreshAcctBtn();
+    return true;
+  }catch(e){
+    cloudState = 'err'; refreshAcctBtn();
+    return false;
+  }
+}
+async function cloudPull(){
+  if(!cloudOn() || !AUTH) return false;
+  const t = await cloudToken();
+  const r = await fetch(CLOUD.url + '/rest/v1/progress?select=data&user_id=eq.' + encodeURIComponent(AUTH.uid), {
+    headers: authHeaders(t) });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const arr = await r.json();
+  const remote = arr && arr[0] && arr[0].data;
+  if(!remote) return false;
+  cloudMuting = true;
+  const n = mergeCloud(remote);
+  save();
+  cloudMuting = false;
+  return n;
+}
+function refreshAcctBtn(){
+  const b = $('#acctBtn');
+  if(!b) return;
+  b.textContent = '👤';
+  b.style.color = AUTH ? (cloudState === 'err' ? 'var(--bad)' : 'var(--accent)') : '';
+  b.title = AUTH
+    ? ('已登录 ' + AUTH.email + ' · ' + ({ saving:'同步中…', ok:'已同步', err:'同步失败' }[cloudState] || '未同步'))
+    : '登录 / 注册';
+}
+function modalAccount(){
+  if(!cloudOn()){
+    openModal('<h3>账号</h3><p class="sub">还没有接云端后端，账号功能暂时关闭。本地背单词不受影响。</p>' +
+      '<div class="sheet-actions"><button class="btn ghost" data-act="close">知道了</button></div>');
+    return;
+  }
+  if(AUTH){
+    const st = { saving:'正在同步…', ok:'已同步', err:'上次同步失败' }[cloudState] || '已连接';
+    openModal('<h3>已登录</h3>' +
+      '<p class="sub">' + esc(AUTH.email) + '</p>' +
+      '<p class="sub" style="margin-top:6px">' + esc(st) + ' · 共 ' + Object.keys(S.progress).length + ' 个词</p>' +
+      '<div class="sheet-actions">' +
+        '<button class="btn ghost" data-act="acctLogout">退出登录</button>' +
+        '<button class="btn primary" data-act="acctSync">立即同步</button>' +
+      '</div>');
+    return;
+  }
+  openModal('<h3>登录 / 注册</h3>' +
+    '<p class="sub">登录后进度会存到云端，换设备也能接着背。邮箱加密码即可，不需要手机号。</p>' +
+    '<input id="acctEmail" class="lrn-search" type="email" placeholder="邮箱" autocomplete="email">' +
+    '<input id="acctPwd" class="lrn-search" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password">' +
+    '<p class="sub" id="acctMsg" style="color:var(--bad)"></p>' +
+    '<div class="sheet-actions">' +
+      '<button class="btn ghost" data-act="acctSignUp">注册</button>' +
+      '<button class="btn primary" data-act="acctSignIn">登录</button>' +
+    '</div>');
+}
+async function doAuth(kind){
+  const em = (($('#acctEmail') || {}).value || '').trim();
+  const pw = ($('#acctPwd') || {}).value || '';
+  const msg = $('#acctMsg');
+  const say = function(t, bad){ if(msg){ msg.textContent = t; msg.style.color = bad ? 'var(--bad)' : 'var(--sub)'; } };
+  if(!em || em.indexOf('@') < 0){ say('请填一个邮箱', true); return; }
+  if(!pw || pw.length < 6){ say('密码至少 6 位', true); return; }
+  say(kind === 'up' ? '正在注册…' : '正在登录…');
+  try{
+    const j = kind === 'up' ? await cloudSignUp(em, pw) : await cloudSignIn(em, pw);
+    if(!j.access_token){
+      say('注册成功，但需要先去邮箱点确认链接，再回来登录。');
+      return;
+    }
+    adoptSession(j);
+    cloudState = 'ok';
+    refreshAcctBtn();
+    try{ await cloudPull(); }catch(e){}
+    await cloudPush();
+    closeModal();
+    render();
+    toast(kind === 'up' ? '注册成功，已开始同步' : '登录成功，已同步');
+  }catch(e){
+    say(e.message || '出错了', true);
+  }
+}
+
 /* ================= 事件 ================= */
 document.addEventListener('click', function(e){
   const el = e.target.closest('[data-act]');
@@ -12378,6 +12564,27 @@ document.addEventListener('click', function(e){
     case 'stats': show('stats'); break;
     case 'today': show('today'); break;
     case 'learned': show('learned'); break;
+    case 'account': modalAccount(); break;
+    case 'acctSignIn': doAuth('in'); break;
+    case 'acctSignUp': doAuth('up'); break;
+    case 'acctLogout':
+      saveAuth(null);
+      cloudState = 'idle';
+      refreshAcctBtn();
+      closeModal();
+      toast('已退出登录，本地进度保留');
+      break;
+    case 'acctSync': {
+      (async function(){
+        try{
+          const n = await cloudPull();
+          await cloudPush();
+          toast(n ? ('同步完成，合并了 ' + n + ' 条') : '已是最新');
+        }catch(e){ toast('同步失败：' + (e.message || '网络问题')); }
+        refreshAcctBtn();
+      })();
+      break;
+    }
     case 'lrnFilter':
       lrnFilter = el.dataset.f || 'all';
       lrnLimit = 80;
@@ -12559,7 +12766,12 @@ $('#deckSel').addEventListener('change', function(){
 
 /* ================= 启动 ================= */
 renderDeckSelect();
+refreshAcctBtn();
 show('home');
+/* 有登录态就在后台拉一次云端进度，失败不打扰 */
+if(cloudOn() && AUTH){
+  setTimeout(function(){ cloudPull().then(function(){ render(); }).catch(function(){}); }, 800);
+}
 
 })();
 </script>
