@@ -306,6 +306,13 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 .dkb{font-style:normal;font-size:10.5px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 4px;margin-right:6px;white-space:nowrap}
 .tile[data-act]{cursor:pointer}
 .tile[data-act]:hover{border-color:var(--accent)}
+.tst small{display:block;font-size:10px;color:var(--sub);opacity:.8;margin-top:2px;font-weight:400}
+.lrn-search{
+  width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:14px;margin:2px 0 12px;
+  font-family:inherit;outline:none;
+}
+.lrn-search:focus{border-color:var(--accent)}
 
 /* ===== 提示 ===== */
 .toast{
@@ -11227,6 +11234,7 @@ function render(){
   else if(CUR === 'read') renderRead();
   else if(CUR === 'wrong') renderWrongPage();
   else if(CUR === 'today') renderToday();
+  else if(CUR === 'learned') renderLearned();
 }
 
 /* ================= 首页 ================= */
@@ -11308,7 +11316,7 @@ function renderHome(){
   $('#main').innerHTML = `<div class="wrap">
     ${hero}
     <div class="tiles">
-      <div class="tile"><span>已学</span><b>${learned}</b></div>
+      <div class="tile" data-act="learned" title="查看所有学过的词"><span>已学 ›</span><b>${learned}</b></div>
       <div class="tile" data-act="today" title="看看今天背了哪些词"><span>今日已学 ›</span><b>${doneToday}</b></div>
       <div class="tile"><span>连续打卡</span><b>${S.streak.count}</b><i>天</i></div>
     </div>
@@ -11720,6 +11728,7 @@ function renderStats(){
       <div class="stat"><span>连续打卡</span><b>${S.streak.count}<small style="font-size:13px;color:var(--sub)"> 天</small></b></div>
       <div class="stat"><span>全部词书累计</span><b>${Object.keys(S.progress).length}</b></div>
     </div>
+    <p class="sub" style="margin-top:12px;text-align:center"><button class="link" data-act="learned" style="padding:0;text-decoration:underline">查看全部已学词 →</button></p>
     <div class="card section">
       <h3>最近 7 天</h3>
       <div class="chart">
@@ -12082,6 +12091,102 @@ function renderToday(){
     '</div></div>';
 }
 
+/* ================= 全部已学 ================= */
+const LRN_STATUS = ['all', 'learning', 'review', 'mastered'];
+const LRN_LABEL = { all:'全部', learning:'学习中', review:'复习中', mastered:'已掌握' };
+let lrnFilter = 'all', lrnQ = '', lrnLimit = 80;
+
+function learnStatusOf(r){
+  if(r.s === 0) return 'learning';
+  if(r.s >= MASTER) return 'mastered';
+  return 'review';
+}
+function learnStatusText(r){
+  if(r.s === 0){
+    const need = r.need || NEED_SOLID, cs = r.cs || 0;
+    return '学习中 · 还需 ' + Math.max(0, need - cs) + ' 次';
+  }
+  if(r.s >= MASTER) return '已掌握';
+  return '第 ' + r.s + ' 档' + (r.fz ? ' · 密集' : '');
+}
+function learnDueText(r){
+  if(!r || r.s === 0 || !r.due) return '';
+  const days = Math.round((r.due - Date.now()) / DAY);
+  if(days <= 0) return '今天';
+  if(days === 1) return '明天';
+  const d = new Date(r.due);
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+function learnAll(){
+  const out = [];
+  Object.keys(S.progress).forEach(function(k){
+    const i = k.indexOf('::');
+    if(i < 0) return;
+    const r = S.progress[k];
+    if(!r) return;
+    out.push({ key:k, dk:k.slice(0, i), name:k.slice(i + 2), r:r, st:learnStatusOf(r) });
+  });
+  return out;
+}
+function learnFiltered(){
+  const q = lrnQ.trim().toLowerCase();
+  const list = learnAll().filter(function(e){
+    if(lrnFilter !== 'all' && e.st !== lrnFilter) return false;
+    if(!q) return true;
+    if(e.name.toLowerCase().indexOf(q) >= 0) return true;
+    const d = findWordData(e.name, e.dk);
+    return !!(d && String(d.m).toLowerCase().indexOf(q) >= 0);
+  });
+  list.sort(function(a, b){ return (b.r.last || 0) - (a.r.last || 0); });
+  return list;
+}
+function lrnRows(list){
+  if(!list.length){
+    const has = learnAll().length;
+    return '<div class="done" style="padding:26px 10px"><div class="emoji">📚</div>' +
+      '<h2>' + (has ? '没有符合条件的词' : '还没有学过任何词') + '</h2>' +
+      '<p class="sub">' + (has ? '换个筛选条件，或者清空搜索框' : '先去背几个，这里就会记下来') + '</p></div>';
+  }
+  const shown = list.slice(0, lrnLimit).map(function(e){
+    const d = findWordData(e.name, e.dk);
+    const ph = (d && d.ph) ? '<i class="ipa">' + esc(d.ph) + '</i> ' : '';
+    const mean = (d && d.m) ? esc(String(d.m).slice(0, 64)) : '';
+    const badge = META[e.dk] ? '<em class="dkb">' + esc(META[e.dk].name.replace('词汇', '')) + '</em>' : '';
+    const due = learnDueText(e.r);
+    return '<div class="wrow"><b>' + esc(e.name) + '</b><span>' + badge + ph + mean + '</span>' +
+      '<em class="tst">' + esc(learnStatusText(e.r)) +
+      (due ? '<small>下次 ' + esc(due) + '</small>' : '') + '</em></div>';
+  }).join('');
+  const more = list.length > lrnLimit
+    ? '<button class="btn ghost wide" data-act="lrnMore">显示更多（还有 ' + (list.length - lrnLimit) + ' 个）</button>'
+    : '';
+  return '<div class="wrows">' + shown + '</div>' + more;
+}
+function refreshLrnList(){
+  renderLearned();
+  const el = $('#lrnQ');
+  if(el && el.focus){
+    try{ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
+  }
+}
+function renderLearned(){
+  const all = learnAll();
+  const counts = { all: all.length, learning:0, review:0, mastered:0 };
+  all.forEach(function(e){ counts[e.st]++; });
+  const chips = LRN_STATUS.map(function(f){
+    return '<button class="chip' + (f === lrnFilter ? ' on' : '') + '" data-act="lrnFilter" data-f="' + f + '">' +
+      LRN_LABEL[f] + '<i>' + counts[f] + '</i></button>';
+  }).join('');
+  const list = learnFiltered();
+  $('#main').innerHTML = '<div class="wrap pad">' +
+    '<div class="study-bar"><button class="link" data-act="home">← 返回</button>' +
+      '<div class="pbar" style="opacity:0"></div><span class="tiny" id="lrnCount">' + list.length + ' 个</span></div>' +
+    '<div class="read-levels">' + chips + '</div>' +
+    '<input id="lrnQ" class="lrn-search" type="search" placeholder="搜单词或释义…" value="' + esc(lrnQ) + '">' +
+    '<div id="lrnList">' + lrnRows(list) + '</div>' +
+    '</div>';
+}
+
 /* ================= 弹层 ================= */
 function openModal(html){
   $('#sheet').innerHTML = html;
@@ -12272,6 +12377,16 @@ document.addEventListener('click', function(e){
     case 'quizAgain': startQuiz(); break;
     case 'stats': show('stats'); break;
     case 'today': show('today'); break;
+    case 'learned': show('learned'); break;
+    case 'lrnFilter':
+      lrnFilter = el.dataset.f || 'all';
+      lrnLimit = 80;
+      renderLearned();
+      break;
+    case 'lrnMore':
+      lrnLimit += 80;
+      refreshLrnList();
+      break;
     case 'home': show('home'); break;
     case 'read': show('read'); break;
     case 'readLv': {
@@ -12407,6 +12522,11 @@ document.addEventListener('input', function(e){
   if(e.target.id === 'ttsRate'){
     const v = $('#ttsRateVal');
     if(v) v.textContent = e.target.value;
+  }
+  if(e.target.id === 'lrnQ'){
+    lrnQ = e.target.value;
+    lrnLimit = 80;
+    refreshLrnList();
   }
 });
 
