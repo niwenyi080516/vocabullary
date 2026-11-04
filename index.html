@@ -11728,8 +11728,10 @@ function offerUndo(o){
   clearTimeout(undoTimer);
   const t = $('#toast');
   const r = S.progress[o.key];
-  const txt = (r.s === 0 ? '还需连续答对 ' + Math.max(0, r.need - r.cs) + ' 次' : ladderDays(r.fz, r.s) + ' 天后再复习');
-  t.innerHTML = '认识 · ' + txt +
+  const txt = o.completed
+    ? '🎉 复习全部完成 · 已进「已掌握」'
+    : '认识 · ' + (r.s === 0 ? '还需连续答对 ' + Math.max(0, r.need - r.cs) + ' 次' : ladderDays(r.fz, r.s) + ' 天后再复习');
+  t.innerHTML = txt +
     '<button class="undo" data-act="undo">撤销</button>';
   t.hidden = false;
   undoTimer = setTimeout(function(){ t.hidden = true; UNDO = null; }, 3500);
@@ -11749,6 +11751,13 @@ function undoGrade(){
       else { l.review = Math.max(0, l.review - 1); dl.review = Math.max(0, dl.review - 1); }
     }
   }
+  if(o.completed){
+    const wname = String(o.key).split('::')[1] || '';
+    for(let i = S.known.length - 1; i >= 0; i--){
+      if(String(S.known[i].w).toLowerCase() === wname.toLowerCase()){ S.known.splice(i, 1); }
+    }
+    DECKS.known = S.known;
+  }
   if(o.sess && o.sess.i > 0) o.sess.i--;
   save();
   $('#toast').hidden = true;
@@ -11761,13 +11770,25 @@ function grade(g){
   const item = sess.queue[sess.i];
   const key = kkey(item.w.w);
   const casual = sess.mode === 'random';   // 随机复习：只看，不改排期
-  let snap = null, wasNew = false, logAdded = false, again = false;
+  let snap = null, wasNew = false, logAdded = false, again = false, justCompleted = false;
 
   if(!casual){
     const before = S.progress[key];
     snap = before ? Object.assign({}, before) : null;
     wasNew = !before;
     again = applyGrade(item.w.w, g, key);
+    /* 走完整条复习阶梯（到达最高档）→ 自动进「已掌握」 */
+    const rr = S.progress[key];
+    const topStage = ((rr && rr.fz) ? IV_FUZZY : IV).length - 1;
+    if(rr && g === 2 && rr.s >= topStage && !rr.done && !knownHas(item.w.w)){
+      rr.done = 1;
+      S.known.push({
+        w:item.w.w, ph:item.w.ph || '', m:item.w.m || '', ex:item.w.ex || '',
+        pos:item.w.pos || '', dk:S.deck, t:Date.now(), auto:1
+      });
+      DECKS.known = S.known;
+      justCompleted = true;
+    }
     const l = todayLog();
     if(!l.ids[key]){
       l.ids[key] = 1;
@@ -11794,6 +11815,7 @@ function grade(g){
   renderCard();
 
   if(casual) toast(g === 2 ? '记住了' : (g === 1 ? '再看一遍吧' : '这一轮还会再见到它'));
+  else if(justCompleted) offerUndo({ key:key, snap:snap, wasNew:wasNew, logAdded:logAdded, deck:S.deck, sess:sess, completed:true });
   else if(g === 2) offerUndo({ key:key, snap:snap, wasNew:wasNew, logAdded:logAdded, deck:S.deck, sess:sess });
   else if(g === 1) toast('有点模糊 · 稍后再来一次');
   else if(g === 3) toast(justAdded ? '答错了 · 已收进错词库，这个词要重新学' : '答错了 · 这个词要重新学');
@@ -12397,7 +12419,8 @@ function renderKnownPage(){
   const list = S.known;
   const rows = list.map(function(e, i){
     return '<div class="wrow"><b>' + esc(e.w) + '</b>' +
-      '<span>' + (e.ph ? '<i class="ipa">' + esc(e.ph) + '</i> ' : '') +
+      '<span>' + (e.auto ? '<em class="dkb">自动</em>' : '') +
+        (e.ph ? '<i class="ipa">' + esc(e.ph) + '</i> ' : '') +
         esc(String(e.m || '').slice(0, 70)) + '</span>' +
       '<button class="x" data-act="delKnown" data-i="' + i + '" aria-label="取消标熟 ' + esc(e.w) + '" title="取消标熟，放回学习和复习">↺</button>' +
     '</div>';
@@ -12406,7 +12429,7 @@ function renderKnownPage(){
     '<div class="study-bar"><button class="link" data-act="home">← 返回</button>' +
       '<div class="pbar" style="opacity:0"></div><span class="tiny">' + list.length + ' 个</span></div>' +
     '<div class="card section"><h3>已完成学习<span class="sub">' + list.length + ' 个</span></h3>' +
-      '<p class="sub">标熟的词不会再进入学习和复习队列。点右边的 ↺ 可以放回去继续学。</p>' +
+      '<p class="sub">标熟的词不会再进入学习和复习队列。走完 1/2/4/7/15/30/60/120 天整条复习阶梯的词也会自动进来，标着「自动」。点右边的 ↺ 可以放回去继续学。</p>' +
       (list.length
         ? '<div class="wrows">' + rows + '</div>' +
           '<div class="sheet-actions"><button class="btn ghost" data-act="clearKnown">全部取消标熟</button></div>'
