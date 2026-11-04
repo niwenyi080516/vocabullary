@@ -191,6 +191,20 @@ h1,h2,h3,p{margin:0}
 }
 .opt:hover:not(:disabled){border-color:var(--accent)}
 .opt:disabled{cursor:default}
+.q-spell{margin-top:16px}
+.spell-hint{text-align:center;font-size:19px;letter-spacing:3px;color:var(--ink);margin-bottom:4px}
+.spell-n{display:block;font-size:11.5px;color:var(--sub);letter-spacing:0;margin-top:8px}
+.spell-given{text-align:center;font-size:14px;color:var(--sub);margin:6px 0 2px}
+.qfb{margin-top:16px;padding:16px;border-radius:16px;border:1px solid var(--line)}
+.qfb.ok{background:var(--ok-soft);border-color:var(--ok)}
+.qfb.bad{background:var(--bad-soft);border-color:var(--bad)}
+.qfb b{display:block;font-size:14px;margin-bottom:8px}
+.qfb.ok b{color:var(--ok)}
+.qfb.bad b{color:var(--bad)}
+.qfb-w{font-size:20px;font-weight:700}
+.qfb-m{font-size:13.5px;color:var(--sub);line-height:1.6;margin-top:6px}
+.qfb .ex{font-size:13px;margin-top:8px;font-style:italic}
+.qfb .btn{margin-top:14px}
 .opt.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok);font-weight:650}
 .opt.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
 
@@ -11432,12 +11446,144 @@ function startSession(mode){
   renderCard();
 }
 
+/* ================= 学习题型 ================= */
+const Q_TYPES = ['w2m', 'm2w', 'spell'];
+let qLastType = '';
+
+function pickQType(item){
+  if(item.forcedFlash){ item.forcedFlash = false; return 'flash'; }   // 答错后的下一次先给闪卡重新认
+  const key = kkey(item.w.w);
+  const seen = (sess && sess.appear) ? (sess.appear[key] || 0) : 0;
+  const r = S.progress[key];
+  // 新词第一次出现先走闪卡，认一遍再考
+  if(seen === 0 && (!r || r.s === 0)) return 'flash';
+  let t = Q_TYPES[Math.floor(Math.random() * Q_TYPES.length)];
+  if(t === qLastType) t = Q_TYPES[(Q_TYPES.indexOf(t) + 1) % Q_TYPES.length];
+  qLastType = t;
+  return t;
+}
+function qOptions(item){
+  const pool = shuffle(studyWords().filter(x => x.w !== item.w.w && x.m));
+  const used = {};
+  used[String(item.w.w).toLowerCase()] = 1;
+  used['m:' + String(item.w.m).toLowerCase()] = 1;
+  const out = [];
+  for(let i = 0; i < pool.length && out.length < 3; i++){
+    const k = String(pool[i].w).toLowerCase();
+    const mk = 'm:' + String(pool[i].m).toLowerCase();
+    if(used[k] || used[mk]) continue;
+    used[k] = 1; used[mk] = 1;
+    out.push(pool[i]);
+  }
+  return shuffle([item.w].concat(out));
+}
+function spellHint(word){
+  const s = String(word);
+  let out = s.charAt(0);
+  for(let i = 1; i < s.length; i++) out += (s.charAt(i) === ' ' ? ' ' : ' _');
+  return '<span class="ipa">' + esc(out) + '</span><span class="spell-n">' + s.length + ' 个字符</span>';
+}
+function renderQuestion(item){
+  const w = item.w;
+  const pct = (sess.i / sess.queue.length) * 100;
+  const oxUrl = 'https://www.oxfordlearnersdictionaries.com/definition/english/' + encodeURIComponent(w.w);
+  const inWrong = wrongHas(w.w);
+  if(!item.qopts) item.qopts = qOptions(item);
+  const isSpell = item.qtype === 'spell';
+  const prompt = item.qtype === 'w2m'
+    ? '<div class="q-word">' + esc(w.w) + '</div>' +
+      '<div class="fp">' + (w.pos ? '<span class="ptag">' + esc(w.pos) + '</span>' : '') +
+      (w.ph ? '<span class="ipa">' + esc(w.ph) + '</span>' : '') +
+      '<button class="spk" data-act="speak" aria-label="朗读单词">🔊</button></div>' +
+      '<div class="q-ask">选出正确的释义</div>'
+    : '<div class="q-mean">' + esc(w.m) + '</div>' +
+      '<div class="q-ask">' + (isSpell ? ((w.pos ? esc(w.pos) + ' · ' : '') + '拼出这个单词') : '哪个单词是这个意思?') + '</div>';
+
+  let body;
+  if(isSpell){
+    body = '<div class="q-spell">' +
+      '<div class="spell-hint">' + spellHint(w.w) + '</div>' +
+      (item.qanswered
+        ? '<div class="spell-given">你写的是：<b>' + esc(item.qinput || '') + '</b></div>'
+        : '<input id="spellIn" class="lrn-search" placeholder="输入单词…" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+          '<button class="btn primary wide" data-act="qsubmit">提交</button>') +
+      '</div>';
+  }else{
+    body = '<div class="opts">' + item.qopts.map(function(o, i){
+      const txt = item.qtype === 'w2m' ? o.m : o.w;
+      const isCorrect = o.w === w.w;
+      let cls = 'opt';
+      if(item.qanswered){
+        if(isCorrect) cls += ' right';
+        else if(i === item.qpick) cls += ' wrong';
+      }
+      return '<button class="' + cls + '"' + (item.qanswered ? ' disabled' : '') +
+        ' data-act="qopt" data-i="' + i + '">' + esc(txt) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  const fb = item.qanswered
+    ? '<div class="qfb ' + (item.qcorrect ? 'ok' : 'bad') + '">' +
+        '<b>' + (item.qcorrect ? '答对了' : '答错了，这个词要重新学') + '</b>' +
+        '<div class="qfb-w">' + esc(w.w) + (w.ph ? ' <span class="ipa">' + esc(w.ph) + '</span>' : '') + '</div>' +
+        '<div class="qfb-m">' + esc(w.m) + '</div>' +
+        (w.ex ? '<div class="ex">' + esc(w.ex) + '</div>' : '') +
+        '<button class="btn primary wide" data-act="qnext">' + (item.qcorrect ? '继续' : '重新学一遍') + '</button>' +
+      '</div>'
+    : '';
+
+  $('#main').innerHTML = '<div class="wrap pad">' +
+    '<div class="study-bar"><button class="link" data-act="exit">← 退出</button>' +
+      '<div class="pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+      '<span class="tiny">' + (sess.i + 1) + '/' + sess.queue.length + '</span></div>' +
+    '<div class="q-card">' + prompt + '</div>' +
+    body + fb +
+    '<div class="card-tools">' +
+      '<button class="tool" data-act="markKnown">✅ 标熟</button>' +
+      (inWrong ? '<span class="tool on">⚠️ 已在错词库</span>'
+               : '<button class="tool" data-act="addWrong">＋ 加入错词库</button>') +
+      '<a class="tool" href="' + oxUrl + '" target="_blank" rel="noopener noreferrer">牛津词典 ↗</a>' +
+    '</div>' +
+    '<p class="kbd-hint">' + (isSpell ? '输入后回车提交' : '按 1–4 选择') + '</p></div>';
+
+  if(item.qtype === 'w2m' && S.settings.autoSpeak) speak(w.w);
+}
+
+function pickOption(i){
+  if(!sess || sess.i >= sess.queue.length) return;
+  const it = sess.queue[sess.i];
+  if(!it || it.qanswered || !it.qopts || !it.qopts[i]) return;
+  it.qpick = i;
+  it.qanswered = true;
+  it.qcorrect = (it.qopts[i].w === it.w.w);
+  renderCard();
+}
+function submitSpell(){
+  if(!sess || sess.i >= sess.queue.length) return;
+  const it = sess.queue[sess.i];
+  if(!it || it.qanswered) return;
+  const v = (($('#spellIn') || {}).value || '').trim();
+  if(!v){ toast('先输入再提交'); return; }
+  it.qinput = v;
+  it.qanswered = true;
+  it.qcorrect = (v.toLowerCase() === String(it.w.w).toLowerCase());
+  renderCard();
+}
+function nextQuestion(){
+  if(!sess || sess.i >= sess.queue.length) return;
+  const it = sess.queue[sess.i];
+  if(!it || !it.qanswered) return;
+  grade(it.qcorrect ? 2 : 3);
+}
+
 function renderCard(){
   if(!sess){ CUR = 'home'; renderHome(); return; }
   while(sess.i < sess.queue.length && knownHas(sess.queue[sess.i].w.w)) sess.i++;   // 跳过本轮里被标熟的词
   if(sess.i >= sess.queue.length){ return renderDone(); }
   const item = sess.queue[sess.i];
   const w = item.w;
+  if(!item.qtype) item.qtype = pickQType(item);
+  if(item.qtype !== 'flash'){ renderQuestion(item); return; }
   const pct = (sess.i / sess.queue.length) * 100;
   const oxUrl = 'https://www.oxfordlearnersdictionaries.com/definition/english/' + encodeURIComponent(w.w);
   const inWrong = wrongHas(w.w);
@@ -11521,6 +11667,18 @@ function applyGrade(word, g, key){
   r.reps++;
   r.last = now;
   let again = false;
+
+  /* g === 3：题型答错。退回「学习中」，重新从头学 */
+  if(g === 3){
+    r.s = 0;
+    r.cs = 0;
+    r.fz = 1;
+    r.need = NEED_FUZZY;
+    r.lapses++;
+    r.due = now + 10 * 60000;
+    touchStreak();
+    return true;
+  }
 
   if(r.s === 0){
     /* ---- 学习中 ---- */
@@ -11619,15 +11777,15 @@ function grade(g){
     }
   }
 
-  const justAdded = (!casual && g === 0) ? bumpWrong(item.w) : false;
+  const justAdded = (!casual && (g === 0 || g === 3)) ? bumpWrong(item.w) : false;
 
   /* 本轮内重新插入：按评分给不同间隔，插到当前卡之后第 gap 张的位置 */
   if(again){
     sess.appear[key] = (sess.appear[key] || 0) + 1;
     if(sess.appear[key] < MAX_APPEAR){
-      const gap = g === 0 ? GAP_FAIL : (g === 1 ? GAP_FUZZY : GAP_KNOW);
+      const gap = (g === 0 || g === 3) ? GAP_FAIL : (g === 1 ? GAP_FUZZY : GAP_KNOW);
       const pos = Math.min(sess.queue.length, sess.i + gap + 1);
-      sess.queue.splice(pos, 0, { w:item.w, isNew:false });
+      sess.queue.splice(pos, 0, { w:item.w, isNew:false, forcedFlash: g === 3 });
     }
   }
 
@@ -11638,6 +11796,7 @@ function grade(g){
   if(casual) toast(g === 2 ? '记住了' : (g === 1 ? '再看一遍吧' : '这一轮还会再见到它'));
   else if(g === 2) offerUndo({ key:key, snap:snap, wasNew:wasNew, logAdded:logAdded, deck:S.deck, sess:sess });
   else if(g === 1) toast('有点模糊 · 稍后再来一次');
+  else if(g === 3) toast(justAdded ? '答错了 · 已收进错词库，这个词要重新学' : '答错了 · 这个词要重新学');
   else toast(justAdded ? '不认识 · 已收进错词库（累计错满 ' + WRONG_HIT + ' 次）' : '不认识 · 这一轮还会再碰到');
 }
 
@@ -12627,6 +12786,9 @@ document.addEventListener('click', function(e){
       break;
     case 'reveal': reveal(); break;
     case 'grade': grade(parseInt(el.dataset.g, 10)); break;
+    case 'qopt': pickOption(parseInt(el.dataset.i, 10)); break;
+    case 'qsubmit': submitSpell(); break;
+    case 'qnext': nextQuestion(); break;
     case 'start': startSession('scheduled'); break;
     case 'random': startSession('random'); break;
     case 'again': startSession('scheduled'); break;
@@ -12845,7 +13007,18 @@ document.addEventListener('keydown', function(e){
     return;
   }
   if(CUR === 'study' && sess){
-    if(e.code === 'Space'){ e.preventDefault(); reveal(); }
+    const cur = sess.queue[sess.i];
+    const isQ = cur && cur.qtype && cur.qtype !== 'flash';
+    if(isQ && cur.qanswered && e.key === 'Enter'){ e.preventDefault(); nextQuestion(); return; }
+    if(isQ && !cur.qanswered){
+      if(cur.qtype === 'spell' && e.key === 'Enter'){ e.preventDefault(); submitSpell(); return; }
+      if(/^[1-4]$/.test(e.key) && cur.qopts && cur.qopts[parseInt(e.key, 10) - 1]){
+        e.preventDefault();
+        pickOption(parseInt(e.key, 10) - 1);
+        return;
+      }
+    }
+    if(e.code === 'Space' && !isQ){ e.preventDefault(); reveal(); }
     else if(e.key === '1' || e.key === '2' || e.key === '3'){
       const row = $('#rateRow');           // 学完一轮后 #rateRow 已不存在，不能直接取 .hidden
       if(row && !row.hidden) grade(parseInt(e.key, 10) - 1);
